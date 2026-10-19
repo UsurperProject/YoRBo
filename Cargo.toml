@@ -1,0 +1,16 @@
+[package]
+name = "yorbo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+confy = "2.0.0"
+hadris = { version = "3.0.0-rc.1", features = ["std", "sync", "fat", "part", "write"] }
+anyhow = "1"
+input-macro = "0.2.0"
+serde = {version = "1.0.229", features = ["derive"]}
+serde_json = "1.0.154"
+grubenv = { git = "https://github.com/Ki11switch57/grubenv", version = "0.1.0" }
+efivar = "2.0.0"
+uuid = "1.28.0"
