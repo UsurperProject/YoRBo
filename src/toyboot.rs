@@ -108,7 +108,8 @@ pub fn set_ventoy_boot(partition: &PartitionInfo) -> Result<()> {
 
 pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     const DESC: &str = "YoRBo";
-    const EFI_PATH: &str = "/EFI/BOOT/grubx64.efi";
+    // Cuz apparently microsoft got their hands on uefi too
+    const EFI_PATH: &str = r"\EFI\BOOT\grubx64.efi";
     let Some(mountpoint) = partition.mountpoint.as_ref() else {
         return Err(anyhow!("partition not mounted"));
     };
@@ -220,7 +221,6 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
             &id.to_le_bytes(),
         )
         .context("failed to set BootNext")?;
-    panic!("");
     #[cfg(windows)]
     Command::new("shutdown")
         .arg("/r")
