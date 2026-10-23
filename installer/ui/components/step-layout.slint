@@ -1,0 +1,97 @@
+import { Theme } from "../theme.slint";
+import { Button } from "button.slint";
+
+// Shared frame for every wizard step: heading, optional one-line description,
+// content slot, and a footer with a short status line and actions.
+export component StepLayout inherits Rectangle {
+    in property <string> heading;
+    in property <string> description;
+    in property <string> footer-status;
+
+    in property <bool> show-secondary: true;
+    in property <string> secondary-text: "Cancel";
+    in property <bool> secondary-enabled: true;
+
+    in property <bool> show-primary: false;
+    in property <string> primary-text;
+    in property <bool> primary-enabled: true;
+    in property <bool> primary-arrow: false;
+
+    callback secondary-clicked();
+    callback primary-clicked();
+
+    VerticalLayout {
+        VerticalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 22px;
+            padding-bottom: 14px;
+            spacing: 16px;
+            alignment: start;
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: 6px;
+                Text {
+                    text: root.heading;
+                    color: Theme.text;
+                    font-family: Theme.font-sans;
+                    font-size: 22px;
+                    font-weight: 600;
+                    wrap: word-wrap;
+                }
+                if root.description != "": Text {
+                    text: root.description;
+                    color: Theme.text-secondary;
+                    font-family: Theme.font-sans;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+
+            @children
+        }
+
+        Rectangle {
+            height: 56px;
+            Rectangle { y: 0; height: 1px; background: Theme.border; }
+            HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: root.footer-status;
+                    color: Theme.text-muted;
+                    font-family: Theme.font-sans;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    VerticalLayout {
+                        alignment: center;
+                        if root.show-secondary: Button {
+                            text: root.secondary-text;
+                            enabled: root.secondary-enabled;
+                            clicked => { root.secondary-clicked(); }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        if root.show-primary: Button {
+                            text: root.primary-text;
+                            primary: true;
+                            show-arrow: root.primary-arrow;
+                            enabled: root.primary-enabled;
+                            clicked => { root.primary-clicked(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

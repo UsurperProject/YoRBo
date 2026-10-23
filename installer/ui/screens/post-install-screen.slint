@@ -1,0 +1,22 @@
+import { TaskItem } from "../types.slint";
+import { StepLayout } from "../components/step-layout.slint";
+import { TaskRow } from "../components/task-row.slint";
+
+export component PostInstallScreen inherits Rectangle {
+    in property <[TaskItem]> tasks;
+
+    StepLayout {
+        heading: "Finishing up";
+        footer-status: "Don’t restart your PC.";
+        secondary-text: "Please wait";
+        secondary-enabled: false;
+
+        VerticalLayout {
+            spacing: 2px;
+            for task in root.tasks: TaskRow {
+                title: task.title;
+                state: task.state;
+            }
+        }
+    }
+}

@@ -1,0 +1,65 @@
+import { Theme } from "../theme.slint";
+import { PartitionOption } from "../types.slint";
+import { StepLayout } from "../components/step-layout.slint";
+import { ChoiceCard } from "../components/choice-card.slint";
+import { PartitionSelect } from "../components/partition-select.slint";
+
+// use-existing = true: pick a FAT32 partition; false: shrink a volume for a new one.
+export component BootloaderChoiceScreen inherits Rectangle {
+    in-out property <bool> use-existing: true;
+    in property <[PartitionOption]> fat32-partitions;
+    in property <[PartitionOption]> shrink-partitions;
+    in-out property <int> fat32-index: 0;
+    in-out property <int> shrink-index: 0;
+    callback back();
+    callback continue-existing(int);
+    callback create-partition(int);
+
+    private property <string> shrink-target:
+        root.shrink-index >= 0 && root.shrink-index < root.shrink-partitions.length
+            ? root.shrink-partitions[root.shrink-index].name : "";
+
+    StepLayout {
+        heading: "Bootloader partition";
+        footer-status: root.use-existing
+            ? "Back up important data first."
+            : "Shrinks " + root.shrink-target + " by 100 MB. Back up first.";
+        secondary-text: "Back";
+        show-primary: true;
+        primary-text: root.use-existing ? "Continue" : "Create partition";
+        secondary-clicked => { root.back(); }
+        primary-clicked => {
+            if (root.use-existing) {
+                root.continue-existing(root.fat32-index);
+            } else {
+                root.create-partition(root.shrink-index);
+            }
+        }
+
+        VerticalLayout {
+            spacing: 10px;
+
+            ChoiceCard {
+                selected: root.use-existing;
+                title: "Use an existing FAT32 partition";
+                description: "Nothing is formatted.";
+                clicked => { root.use-existing = true; }
+                if root.use-existing: PartitionSelect {
+                    options: root.fat32-partitions;
+                    current-index <=> root.fat32-index;
+                }
+            }
+
+            ChoiceCard {
+                selected: !root.use-existing;
+                title: "Create a new 100 MB partition";
+                description: "Shrinks a volume to make room.";
+                clicked => { root.use-existing = false; }
+                if !root.use-existing: PartitionSelect {
+                    options: root.shrink-partitions;
+                    current-index <=> root.shrink-index;
+                }
+            }
+        }
+    }
+}

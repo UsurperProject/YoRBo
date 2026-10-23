@@ -1,0 +1,47 @@
+import { Theme } from "../theme.slint";
+
+// Determinate progress: label + percentage, track, caption.
+export component ProgressBlock inherits VerticalLayout {
+    in property <string> label;
+    in property <float> progress; // 0.0 - 1.0
+    in property <string> caption;
+
+    spacing: 8px;
+
+    HorizontalLayout {
+        Text {
+            text: root.label;
+            color: Theme.text;
+            font-family: Theme.font-sans;
+            font-size: 12px;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: Math.round(Math.clamp(root.progress, 0, 1) * 100) + "%";
+            color: Theme.accent;
+            font-family: Theme.font-mono;
+            font-size: 12px;
+        }
+    }
+
+    Rectangle {
+        height: 4px;
+        background: Theme.divider;
+        clip: true;
+        Rectangle {
+            x: 0;
+            width: parent.width * Math.clamp(root.progress, 0, 1);
+            height: parent.height;
+            background: Theme.accent;
+            animate width { duration: 250ms; easing: ease-out; }
+        }
+    }
+
+    if root.caption != "": Text {
+        text: root.caption;
+        color: Theme.text-muted;
+        font-family: Theme.font-mono;
+        font-size: 10px;
+        wrap: word-wrap;
+    }
+}

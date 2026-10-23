@@ -1,0 +1,119 @@
+import { Theme } from "../theme.slint";
+
+// One full turn every 1.33s (matches the Figma motion: 3 turns per 4s).
+global Motion {
+    out property <angle> spin: Math.mod(animation-tick() / 1.333s, 1) * 360deg;
+}
+
+// Circular loading indicator: track ring, rotating arc, centre dot.
+// The only rounded elements in the UI.
+export component Spinner inherits Rectangle {
+    in property <length> size: 48px;
+    width: root.size;
+    height: root.size;
+
+    Rectangle {
+        border-radius: root.size / 2;
+        border-width: 2px;
+        border-color: Theme.divider;
+    }
+    Path {
+        width: root.size;
+        height: root.size;
+        viewbox-width: 64;
+        viewbox-height: 64;
+        commands: "M 9.4 10.8 A 31 31 0 0 1 58.2 15.4";
+        stroke: Theme.accent;
+        stroke-width: 2px;
+        stroke-line-cap: round;
+        transform-rotation: Motion.spin;
+    }
+    Rectangle {
+        width: 6px;
+        height: 6px;
+        border-radius: 3px;
+        background: Theme.accent;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+}
+
+// Spinner with an orbit guide, ring and satellite (welcome screen).
+export component OrbitalLoader inherits Rectangle {
+    in property <length> size: 112px;
+    width: root.size;
+    height: root.size;
+
+    Rectangle {
+        border-radius: root.size / 2;
+        border-width: 1px;
+        border-color: Theme.divider;
+    }
+    Rectangle {
+        x: 12px;
+        y: 12px;
+        width: root.size - 24px;
+        height: root.size - 24px;
+        border-radius: self.width / 2;
+        border-width: 1px;
+        border-color: Theme.border;
+    }
+    Rectangle {
+        x: root.size - 22px;
+        y: 20px;
+        width: 6px;
+        height: 6px;
+        border-radius: 3px;
+        background: Theme.accent;
+    }
+    Spinner {
+        size: 48px;
+        x: (root.size - self.width) / 2;
+        y: (root.size - self.height) / 2;
+    }
+}
+
+// 18px circular marker for the task that is currently running.
+export component MiniSpinner inherits Rectangle {
+    width: 18px;
+    height: 18px;
+
+    Rectangle {
+        x: 2px;
+        y: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        border-width: 2px;
+        border-color: Theme.divider;
+    }
+    Path {
+        width: 18px;
+        height: 18px;
+        viewbox-width: 18;
+        viewbox-height: 18;
+        commands: "M 4.76 4.76 A 6 6 0 0 1 13.24 4.76";
+        stroke: Theme.accent;
+        stroke-width: 2px;
+        stroke-line-cap: round;
+        transform-rotation: Motion.spin;
+    }
+}
+
+// Indefinite progress: a segment ping-pongs along the track (4s loop, ease-in-out).
+export component IndeterminateBar inherits Rectangle {
+    height: 4px;
+    background: Theme.divider;
+    clip: true;
+
+    property <float> phase: Math.mod(animation-tick() / 4s, 1);
+    property <float> tri: root.phase < 0.5 ? root.phase * 2 : (1 - root.phase) * 2;
+    property <float> eased: root.tri * root.tri * (3 - 2 * root.tri);
+
+    Rectangle {
+        width: 96px;
+        height: parent.height;
+        background: Theme.accent;
+        x: (parent.width - self.width) * root.eased;
+    }
+}

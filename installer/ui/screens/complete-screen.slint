@@ -1,0 +1,45 @@
+import { Theme } from "../theme.slint";
+import { StepLayout } from "../components/step-layout.slint";
+
+export component CompleteScreen inherits Rectangle {
+    callback finish();
+
+    // Reveal animation: box fades in, then the check.
+    private property <bool> revealed: false;
+    init => { self.revealed = true; }
+
+    StepLayout {
+        heading: "Installation complete";
+        description: "Right-click any .iso to get started.";
+        show-secondary: false;
+        show-primary: true;
+        primary-text: "Finish";
+        primary-clicked => { root.finish(); }
+
+        Rectangle {
+            height: 160px;
+            Rectangle {
+                width: 72px;
+                height: 72px;
+                background: Theme.accent-surface;
+                border-width: 2px;
+                border-color: Theme.accent;
+                opacity: root.revealed ? 1 : 0.3;
+                animate opacity { duration: 500ms; easing: ease-out; }
+            }
+            Path {
+                width: 34px;
+                height: 26px;
+                viewbox-width: 34;
+                viewbox-height: 26;
+                commands: "M 2 14 L 12 24 L 32 2";
+                stroke: Theme.accent;
+                stroke-width: 3px;
+                stroke-line-cap: butt;
+                stroke-line-join: miter;
+                opacity: root.revealed ? 1 : 0;
+                animate opacity { duration: 450ms; delay: 150ms; easing: ease-out; }
+            }
+        }
+    }
+}

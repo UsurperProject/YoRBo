@@ -1,0 +1,65 @@
+import { Theme } from "../theme.slint";
+import { StepLayout } from "../components/step-layout.slint";
+import { InfoNote } from "../components/info-note.slint";
+import { Button } from "../components/button.slint";
+import { Icon } from "../components/icon.slint";
+
+export component RunnerDirectoryScreen inherits Rectangle {
+    in property <string> path;
+    callback browse();
+    callback back();
+    callback install();
+
+    StepLayout {
+        heading: "Install location";
+        secondary-text: "Back";
+        show-primary: true;
+        primary-text: "Install";
+        secondary-clicked => { root.back(); }
+        primary-clicked => { root.install(); }
+
+        HorizontalLayout {
+            spacing: 8px;
+            Rectangle {
+                height: 36px;
+                horizontal-stretch: 1;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 10px;
+                    VerticalLayout {
+                        alignment: center;
+                        Icon {
+                            source: @image-url("../assets/icons/folder.svg");
+                            size: 16px;
+                            tint: Theme.text-secondary;
+                        }
+                    }
+                    Text {
+                        text: root.path;
+                        color: Theme.text;
+                        font-family: Theme.font-mono;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                        overflow: elide;
+                        horizontal-stretch: 1;
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: start;
+                Button {
+                    height: 36px;
+                    text: "Browse…";
+                    clicked => { root.browse(); }
+                }
+            }
+        }
+
+        InfoNote { text: "Administrator rights are required."; }
+    }
+}

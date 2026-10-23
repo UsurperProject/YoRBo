@@ -1,0 +1,11 @@
+import { Theme } from "../theme.slint";
+
+// Lucide icon (ISC licensed SVGs in ../assets/icons) tinted with a theme colour.
+export component Icon inherits Image {
+    in property <color> tint: Theme.text-secondary;
+    in property <length> size: 16px;
+    width: root.size;
+    height: root.size;
+    colorize: root.tint;
+    image-fit: contain;
+}

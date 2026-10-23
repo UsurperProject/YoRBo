@@ -1,0 +1,47 @@
+import { Theme } from "../theme.slint";
+import { StepLayout } from "../components/step-layout.slint";
+import { InfoNote } from "../components/info-note.slint";
+import { OrbitalLoader } from "../components/loaders.slint";
+
+// scanning = true: "Checking your system"; false: "Ready to install".
+export component DiscoverScreen inherits Rectangle {
+    in property <bool> scanning: true;
+    callback install();
+    callback cancel();
+
+    StepLayout {
+        heading: root.scanning ? "Checking your system" : "Ready to install";
+        description: root.scanning ? "" : "No existing installation found.";
+        footer-status: root.scanning ? "" : "Alpha build";
+        secondary-text: root.scanning ? "Cancel" : "Close";
+        show-primary: !root.scanning;
+        primary-text: "Install";
+        primary-arrow: true;
+        secondary-clicked => { root.cancel(); }
+        primary-clicked => { root.install(); }
+
+        Rectangle {
+            height: root.scanning ? 190px : 0px;
+            if root.scanning: VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+                HorizontalLayout {
+                    alignment: center;
+                    OrbitalLoader { size: 112px; }
+                }
+                Text {
+                    text: "Looking for an existing install…";
+                    color: Theme.text-muted;
+                    font-family: Theme.font-mono;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        InfoNote {
+            warning: true;
+            text: "UEFI / GPT only. Turn off Secure Boot first.";
+        }
+    }
+}

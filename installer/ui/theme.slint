@@ -1,0 +1,36 @@
+// Design tokens extracted from the "YoRBo Installer" Figma file.
+import "assets/fonts/Inter-Regular.ttf";
+import "assets/fonts/Inter-Medium.ttf";
+import "assets/fonts/Inter-SemiBold.ttf";
+import "assets/fonts/Inter-Bold.ttf";
+import "assets/fonts/JetBrainsMono-Regular.ttf";
+
+export global Theme {
+    // Surfaces
+    out property <color> window-bg: #090d13;
+    out property <color> chrome-bg: #0d131d;      // title bar + sidebar
+    out property <color> surface: #111923;         // notes, unselected cards, fields
+    out property <color> surface-hover: #172330;   // menu option hover/selected
+    out property <color> accent-surface: #132d40;  // selected cards, active markers
+    out property <color> warning-surface: #27241e;
+
+    // Lines
+    out property <color> border: #263444;
+    out property <color> divider: #1c2938;         // detail rows, progress track
+    out property <color> accent-border: #288bd1;   // selected card border
+
+    // Text
+    out property <color> text: #f0f5fa;
+    out property <color> text-secondary: #9aaec2;
+    out property <color> text-muted: #667d94;
+    out property <color> warning-text: #dfc38b;
+    out property <color> on-accent: #071521;
+
+    // Accent
+    out property <color> accent: #51b9f0;
+    out property <color> accent-hover: #6cc4f3;
+
+    // Type
+    out property <string> font-sans: "Inter";
+    out property <string> font-mono: "JetBrains Mono";
+}

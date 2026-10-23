@@ -1,0 +1,38 @@
+import { Theme } from "../theme.slint";
+import { Icon } from "icon.slint";
+
+// One-line info (blue) or warning (amber) callout.
+export component InfoNote inherits Rectangle {
+    in property <string> text;
+    in property <bool> warning: false;
+
+    background: root.warning ? Theme.warning-surface : Theme.surface;
+
+    HorizontalLayout {
+        padding: 10px;
+        spacing: 10px;
+
+        VerticalLayout {
+            alignment: start;
+            if !root.warning: Icon {
+                source: @image-url("../assets/icons/info.svg");
+                size: 14px;
+                tint: Theme.accent;
+            }
+            if root.warning: Icon {
+                source: @image-url("../assets/icons/triangle-alert.svg");
+                size: 14px;
+                tint: Theme.warning-text;
+            }
+        }
+        Text {
+            text: root.text;
+            color: root.warning ? Theme.warning-text : Theme.text-secondary;
+            font-family: Theme.font-sans;
+            font-size: 11px;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+}

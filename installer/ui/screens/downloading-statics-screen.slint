@@ -1,0 +1,28 @@
+import { StepLayout } from "../components/step-layout.slint";
+import { ProgressBlock } from "../components/progress-block.slint";
+import { Spinner } from "../components/loaders.slint";
+
+export component DownloadingStaticsScreen inherits Rectangle {
+    in property <float> progress;
+    in property <string> progress-caption;
+    callback cancel();
+
+    StepLayout {
+        heading: "Downloading YoRBo-statics";
+        footer-status: "Keep your connection active.";
+        secondary-text: "Cancel";
+        secondary-clicked => { root.cancel(); }
+
+        HorizontalLayout {
+            spacing: 18px;
+            padding-top: 8px;
+            VerticalLayout { alignment: start; Spinner { size: 40px; } }
+            ProgressBlock {
+                horizontal-stretch: 1;
+                label: "YoRBo-statics";
+                progress: root.progress;
+                caption: root.progress-caption;
+            }
+        }
+    }
+}

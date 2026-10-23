@@ -1,0 +1,58 @@
+import { Theme } from "../theme.slint";
+import { TaskState } from "../types.slint";
+import { Icon } from "icon.slint";
+import { MiniSpinner } from "loaders.slint";
+
+export component TaskRow inherits Rectangle {
+    in property <string> title;
+    in property <TaskState> state;
+
+    height: 34px;
+    background: root.state == TaskState.running ? Theme.accent-surface : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                if root.state == TaskState.done: Icon {
+                    source: @image-url("../assets/icons/check.svg");
+                    size: 14px;
+                    tint: Theme.accent;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+                if root.state == TaskState.running: MiniSpinner { }
+                if root.state == TaskState.queued: Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    background: Theme.border;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+        Text {
+            text: root.title;
+            color: root.state == TaskState.queued ? Theme.text-muted : Theme.text;
+            font-family: Theme.font-sans;
+            font-size: 12px;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: root.state == TaskState.done ? "DONE"
+                : root.state == TaskState.running ? "RUNNING" : "QUEUED";
+            color: root.state == TaskState.running ? Theme.accent : Theme.text-muted;
+            font-family: Theme.font-mono;
+            font-size: 9px;
+            vertical-alignment: center;
+        }
+    }
+}

@@ -1,0 +1,26 @@
+export enum Step {
+    scanning,
+    install-ready,
+    runner-directory,
+    installing-runner,
+    bootloader-choice,
+    preparing-bootloader,
+    downloading-statics,
+    post-install,
+    complete,
+}
+
+export enum StageState { upcoming, current, done }
+
+export enum TaskState { queued, running, done }
+
+export struct PartitionOption {
+    name: string,
+    meta: string,
+}
+
+export struct TaskItem {
+    title: string,
+    detail: string,
+    state: TaskState,
+}

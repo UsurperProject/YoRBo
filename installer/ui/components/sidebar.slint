@@ -1,0 +1,81 @@
+import { Theme } from "../theme.slint";
+import { StageState } from "../types.slint";
+import { Icon } from "icon.slint";
+
+component StageItem inherits HorizontalLayout {
+    in property <int> number;
+    in property <string> label;
+    in property <StageState> state;
+
+    spacing: 10px;
+    height: 20px;
+
+    Rectangle {
+        width: 20px;
+        height: 20px;
+        border-width: 1px;
+        border-color: root.state == StageState.upcoming ? Theme.border : Theme.accent;
+        background: root.state == StageState.current ? Theme.accent-surface : transparent;
+
+        if root.state == StageState.done: Icon {
+            source: @image-url("../assets/icons/check.svg");
+            size: 12px;
+            tint: Theme.accent;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+        }
+        if root.state != StageState.done: Text {
+            text: root.number;
+            color: root.state == StageState.current ? Theme.accent : Theme.text-muted;
+            font-family: Theme.font-mono;
+            font-size: 10px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+    Text {
+        text: root.label;
+        color: root.state == StageState.current ? Theme.text : Theme.text-muted;
+        font-family: Theme.font-sans;
+        font-size: 12px;
+        font-weight: root.state == StageState.current ? 600 : 400;
+        vertical-alignment: center;
+    }
+}
+
+export component Sidebar inherits Rectangle {
+    // 0-3 = that stage is in progress; 4 = every stage finished
+    in property <int> current-stage: 0;
+
+    width: 150px;
+    background: Theme.chrome-bg;
+
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: Theme.border;
+    }
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 28px;
+        alignment: start;
+
+        // Official logo: assets/yorbo-logo.png (full sidebar width, height follows its aspect ratio)
+        logo := Image {
+            source: @image-url("../assets/yorbo-logo.png");
+            image-fit: fill;
+        }
+
+        VerticalLayout {
+            spacing: 16px;
+            for name[i] in ["Welcome", "Runner", "Bootloader", "Finalize"]: StageItem {
+                number: i + 1;
+                label: name;
+                state: i < root.current-stage ? StageState.done
+                    : i == root.current-stage ? StageState.current
+                    : StageState.upcoming;
+            }
+        }
+    }
+}

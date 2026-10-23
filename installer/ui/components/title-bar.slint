@@ -1,0 +1,70 @@
+import { Theme } from "../theme.slint";
+import { Icon } from "icon.slint";
+
+component WindowControl inherits Rectangle {
+    in property <image> glyph;
+    in property <bool> destructive: false;
+    callback clicked();
+
+    width: 40px;
+    height: 34px;
+    background: area.has-hover
+        ? (root.destructive ? #c42b1c : Theme.surface-hover)
+        : transparent;
+
+    area := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+
+    Icon {
+        source: root.glyph;
+        size: 12px;
+        tint: area.has-hover && root.destructive ? #ffffff : Theme.text-secondary;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+}
+
+export component TitleBar inherits Rectangle {
+    callback minimize();
+    callback maximize();
+    callback close();
+    // Pointer delta since the press that started the drag; the host moves the window.
+    callback drag-moved(length, length);
+
+    height: 34px;
+    background: Theme.chrome-bg;
+
+    TouchArea {
+        moved => { root.drag-moved(self.mouse-x - self.pressed-x, self.mouse-y - self.pressed-y); }
+        double-clicked => { root.maximize(); }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        spacing: 8px;
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle { width: 8px; height: 8px; background: Theme.accent; }
+        }
+        Text {
+            text: "YoRBo Setup";
+            color: Theme.text-secondary;
+            font-family: Theme.font-sans;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+        Rectangle { horizontal-stretch: 1; }
+        WindowControl { glyph: @image-url("../assets/icons/minus.svg"); clicked => { root.minimize(); } }
+        WindowControl { glyph: @image-url("../assets/icons/square.svg"); clicked => { root.maximize(); } }
+        WindowControl { glyph: @image-url("../assets/icons/x.svg"); destructive: true; clicked => { root.close(); } }
+    }
+}

@@ -1,0 +1,49 @@
+import { Theme } from "../theme.slint";
+import { Icon } from "icon.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    in property <bool> show-arrow: false;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 32px;
+    min-width: 84px;
+    border-width: 1px;
+    border-color: root.primary ? Theme.accent : Theme.border;
+    opacity: root.enabled ? 1 : 0.35;
+    background: root.primary
+        ? (area.has-hover && root.enabled ? Theme.accent-hover : Theme.accent)
+        : (area.has-hover && root.enabled ? Theme.surface : transparent);
+
+    area := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        alignment: center;
+
+        Text {
+            text: root.text;
+            color: root.primary ? Theme.on-accent : Theme.text;
+            font-family: Theme.font-sans;
+            font-size: 12px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        if root.show-arrow: VerticalLayout {
+            alignment: center;
+            Icon {
+                source: @image-url("../assets/icons/arrow-right.svg");
+                size: 14px;
+                tint: Theme.on-accent;
+            }
+        }
+    }
+}

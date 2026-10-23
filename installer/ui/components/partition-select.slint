@@ -1,0 +1,103 @@
+import { Theme } from "../theme.slint";
+import { PartitionOption } from "../types.slint";
+import { Icon } from "icon.slint";
+
+export component PartitionSelect inherits VerticalLayout {
+    in property <[PartitionOption]> options;
+    in-out property <int> current-index: 0;
+    in-out property <bool> expanded: false;
+    callback selected(int);
+
+    Rectangle {
+        height: 30px;
+        background: Theme.window-bg;
+        border-width: 1px;
+        border-color: Theme.accent-border;
+
+        TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => { root.expanded = !root.expanded; }
+        }
+
+        HorizontalLayout {
+            padding-left: 10px;
+            padding-right: 10px;
+            Text {
+                text: root.current-index >= 0 && root.current-index < root.options.length
+                    ? root.options[root.current-index].name : "";
+                color: Theme.text;
+                font-family: Theme.font-mono;
+                font-size: 11px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    source: @image-url("../assets/icons/chevron-up.svg");
+                    size: 12px;
+                    tint: Theme.text-secondary;
+                    transform-rotation: root.expanded ? 0deg : 180deg;
+                }
+            }
+        }
+    }
+
+    if root.expanded: Rectangle {
+        background: Theme.chrome-bg;
+        border-width: 1px;
+        border-color: Theme.border;
+
+        VerticalLayout {
+            padding: 3px;
+            for option[i] in root.options: Rectangle {
+                height: 26px;
+                background: i == root.current-index || row.has-hover ? Theme.surface-hover : transparent;
+
+                row := TouchArea {
+                    mouse-cursor: MouseCursor.pointer;
+                    clicked => {
+                        root.current-index = i;
+                        root.expanded = false;
+                        root.selected(i);
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 8px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        if i == root.current-index: Icon {
+                            source: @image-url("../assets/icons/check.svg");
+                            size: 11px;
+                            tint: Theme.accent;
+                        }
+                        if i != root.current-index: Icon {
+                            source: @image-url("../assets/icons/hard-drive.svg");
+                            size: 11px;
+                            tint: Theme.text-muted;
+                        }
+                    }
+                    Text {
+                        text: option.name;
+                        color: i == root.current-index ? Theme.accent : Theme.text-secondary;
+                        font-family: Theme.font-mono;
+                        font-size: 10px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Text {
+                        text: option.meta;
+                        color: Theme.text-muted;
+                        font-family: Theme.font-mono;
+                        font-size: 9px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

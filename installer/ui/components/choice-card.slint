@@ -1,0 +1,67 @@
+import { Theme } from "../theme.slint";
+
+// Selectable card with a square radio marker. Children (e.g. a PartitionSelect)
+// render inside the card under the heading.
+export component ChoiceCard inherits Rectangle {
+    in property <bool> selected: false;
+    in property <string> title;
+    in property <string> description;
+    callback clicked();
+
+    border-width: 1px;
+    background: root.selected ? Theme.accent-surface : Theme.surface;
+    border-color: root.selected ? Theme.accent-border : Theme.border;
+
+    TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 10px;
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 14px;
+                    height: 14px;
+                    border-width: 1px;
+                    border-color: root.selected ? Theme.accent : Theme.text-muted;
+                    if root.selected: Rectangle {
+                        width: 6px;
+                        height: 6px;
+                        background: Theme.accent;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+
+            VerticalLayout {
+                spacing: 3px;
+                horizontal-stretch: 1;
+                Text {
+                    text: root.title;
+                    color: Theme.text;
+                    font-family: Theme.font-sans;
+                    font-size: 13px;
+                    font-weight: 600;
+                    wrap: word-wrap;
+                }
+                if root.description != "": Text {
+                    text: root.description;
+                    color: Theme.text-secondary;
+                    font-family: Theme.font-sans;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        @children
+    }
+}
