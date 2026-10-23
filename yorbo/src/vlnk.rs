@@ -28,7 +28,6 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
             maxcomp: *mut u32, flags: *mut u32, fs: *mut u16, fssz: u32) -> i32;
     }
 
-    // CRC32C (Castagnoli), equivalent to ventoy_getcrc32c(0, ..)
     fn crc32c(buf: &[u8]) -> u32 {
         let mut crc = !0u32;
         for &b in buf {
@@ -40,7 +39,6 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
         !crc
     }
 
-    // --- path checks (drive-letter paths only, like upstream) ---
     let abs = std::path::absolute(image.as_ref())?;
     if !abs.is_file() {
         return Err(err("file does not exist"));
@@ -58,7 +56,6 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
         _ => return Err(err("unsupported file suffix")),
     }
 
-    // --- filesystem check ---
     let root: Vec<u16> = format!("{drive}:\\").encode_utf16().chain([0]).collect();
     let mut fsname = [0u16; 64];
     let ok = unsafe {
@@ -80,7 +77,6 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
         return Err(err("file path too long for vlnk (max 383 bytes)"));
     }
 
-    // --- volume -> physical disk number + partition starting offset ---
     let open = |p: String| OpenOptions::new().read(true).share_mode(3).open(p);
     let vol = open(format!("\\\\.\\{drive}:"))?;
     let mut ext = VolumeDiskExtents::default();
@@ -96,19 +92,17 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     drop(vol);
     let part_offset = ext.extents[0].starting_offset as u64;
 
-    // --- MBR disk signature @ 0x1B8 of the physical drive ---
     let mut disk = open(format!("\\\\.\\PhysicalDrive{}", ext.extents[0].disk_number))?;
     let mut sector = [0u8; 512];
     disk.read_exact(&mut sector)?;
     let sig = &sector[0x1B8..0x1BC];
 
-    // --- build the packed little-endian struct, zero-padded to 32768 ---
     let mut out = vec![0u8; VLNK_FILE_LEN];
-    out[0..16].copy_from_slice(b"  www.ventoy.net"); // VENTOY_GUID bytes
+    out[0..16].copy_from_slice(b"  www.ventoy.net"); 
     out[20..24].copy_from_slice(sig);
     out[24..32].copy_from_slice(&part_offset.to_le_bytes());
     out[32..32 + rel.len()].copy_from_slice(rel.as_bytes());
-    let crc = crc32c(&out[..VLNK_STRUCT_LEN]); // crc field still 0 here
+    let crc = crc32c(&out[..VLNK_STRUCT_LEN]); 
     out[16..20].copy_from_slice(&crc.to_le_bytes());
     Ok(out)
 }
