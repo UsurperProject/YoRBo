@@ -2628,6 +2628,7 @@ name = "installer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "serde_json",
  "slint",
  "slint-build",
 ]
