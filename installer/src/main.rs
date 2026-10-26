@@ -63,5 +63,5 @@ fn handle_window(app: &AppWindow) {
 fn handle_flow(app: &AppWindow) {
     let w = app.as_weak();
     app.on_finish(move || {slint::quit_event_loop().ok(); });
-    app.on_cancel(move || {slint::quit_event_loop().ok(); });
+    app.on_cancel_confirmed(move || {slint::quit_event_loop().ok(); });
 }

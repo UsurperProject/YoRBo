@@ -10,6 +10,7 @@ import { PreparingBootloaderScreen } from "screens/preparing-bootloader-screen.s
 import { DownloadingStaticsScreen } from "screens/downloading-statics-screen.slint";
 import { PostInstallScreen } from "screens/post-install-screen.slint";
 import { CompleteScreen } from "screens/complete-screen.slint";
+import { ConfirmDialog } from "components/confirm-dialog.slint";
 
 export { Step, StageState, TaskState, PartitionOption, TaskItem } from "types.slint";
 
@@ -49,7 +50,7 @@ export component AppWindow inherits Window {
     callback install();
     callback browse-runner();
     callback install-runner();
-    callback cancel();
+    callback cancel-confirmed();   // user confirmed "Cancel install" in the dialog
     callback back();
     callback continue-existing(int);
     callback create-partition(int);
@@ -60,6 +61,24 @@ export component AppWindow inherits Window {
     callback window-maximize();
     callback window-close();
     callback window-drag(length, length);
+
+    // ── Cancel dialog ─────────────────────────────────────────────
+    in-out property <bool> cancel-dialog-open: false;
+    in property <string> cancel-title: "Cancel installation?";
+    in property <string> cancel-message: "Setup will stop. Anything already installed may need to be removed manually.";
+
+    // Open the dialog from anywhere (e.g. host code: app.invoke_show_cancel_dialog()).
+    public function show-cancel-dialog() { root.cancel-dialog-open = true; }
+
+    // Every Cancel button goes through here. Nothing is installed yet on the
+    // "Ready to install" screen, so Close just closes.
+    function request-cancel() {
+        if (root.step == Step.install-ready) {
+            root.window-close();
+        } else {
+            root.cancel-dialog-open = true;
+        }
+    }
 
     private property <int> stage:
         root.step == Step.scanning || root.step == Step.install-ready ? 0
@@ -92,7 +111,7 @@ export component AppWindow inherits Window {
                     if root.step == Step.scanning || root.step == Step.install-ready: DiscoverScreen {
                         scanning: root.step == Step.scanning;
                         install => { root.install(); }
-                        cancel => { root.cancel(); }
+                        cancel => { root.request-cancel(); }
                     }
                     if root.step == Step.runner-directory: RunnerDirectoryScreen {
                         path: root.runner-path;
@@ -103,7 +122,7 @@ export component AppWindow inherits Window {
                     if root.step == Step.installing-runner: InstallingRunnerScreen {
                         progress: root.runner-progress;
                         progress-caption: root.runner-caption;
-                        cancel => { root.cancel(); }
+                        cancel => { root.request-cancel(); }
                     }
                     if root.step == Step.bootloader-choice: BootloaderChoiceScreen {
                         use-existing <=> root.use-existing-partition;
@@ -121,7 +140,7 @@ export component AppWindow inherits Window {
                     if root.step == Step.downloading-statics: DownloadingStaticsScreen {
                         progress: root.statics-progress;
                         progress-caption: root.statics-caption;
-                        cancel => { root.cancel(); }
+                        cancel => { root.request-cancel(); }
                     }
                     if root.step == Step.post-install: PostInstallScreen {
                         tasks: root.tasks;
@@ -130,6 +149,23 @@ export component AppWindow inherits Window {
                         finish => { root.finish(); }
                     }
                 }
+            }
+        }
+
+        ConfirmDialog {
+            x: 0;
+            y: 34px;
+            width: parent.width;
+            height: parent.height - 34px;
+            open: root.cancel-dialog-open;
+            title: root.cancel-title;
+            message: root.cancel-message;
+            confirm-text: "Cancel install";
+            dismiss-text: "Keep installing";
+            dismissed => { root.cancel-dialog-open = false; }
+            confirmed => {
+                root.cancel-dialog-open = false;
+                root.cancel-confirmed();
             }
         }
     }

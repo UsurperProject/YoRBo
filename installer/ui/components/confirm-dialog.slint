@@ -1,0 +1,71 @@
+import { Theme } from "../theme.slint";
+import { Button } from "button.slint";
+
+// In-window confirmation overlay. Dims and blocks everything under it while `open`.
+// Not a separate OS window: place it last inside your window so it draws on top.
+export component ConfirmDialog inherits Rectangle {
+    in property <bool> open: false;
+    in property <string> title: "Are you sure?";
+    in property <string> message;
+    in property <string> confirm-text: "Yes";
+    in property <string> dismiss-text: "No";
+    callback confirmed();
+    callback dismissed();
+
+    if root.open: Rectangle {
+        // Scrim (also swallows clicks so nothing underneath is reachable)
+        Rectangle { background: #000000b3; }
+        TouchArea { clicked => { root.dismissed(); } }
+
+        // Dialog box
+        Rectangle {
+            width: 340px;
+            height: body.preferred-height;
+            background: Theme.chrome-bg;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            // Swallow clicks on the box itself so they don't dismiss
+            TouchArea { }
+
+            body := VerticalLayout {
+                padding: 20px;
+                spacing: 16px;
+
+                VerticalLayout {
+                    spacing: 6px;
+                    Text {
+                        text: root.title;
+                        color: Theme.text;
+                        font-family: Theme.font-sans;
+                        font-size: 15px;
+                        font-weight: 600;
+                        wrap: word-wrap;
+                    }
+                    if root.message != "": Text {
+                        text: root.message;
+                        color: Theme.text-secondary;
+                        font-family: Theme.font-sans;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+                    // The safe choice is the highlighted one.
+                    Button {
+                        text: root.confirm-text;
+                        clicked => { root.confirmed(); }
+                    }
+                    Button {
+                        text: root.dismiss-text;
+                        primary: true;
+                        clicked => { root.dismissed(); }
+                    }
+                }
+            }
+        }
+    }
+}
