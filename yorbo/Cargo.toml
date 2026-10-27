@@ -14,3 +14,4 @@ serde_json = "1.0.154"
 grubenv = { git = "https://github.com/Ki11switch57/grubenv", version = "0.1.0" }
 efivar = "2.0.0"
 uuid = "1.28.0"
+embed-manifest = "1.5.1"

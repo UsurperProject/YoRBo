@@ -1176,6 +1176,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
+name = "embed-manifest"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba92c8f4591bf29f89716b45e5f5f56577adbb81426e5620c6e994da7c88bb7a"
+
+[[package]]
 name = "embedded-io"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2628,6 +2634,7 @@ name = "installer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "embed-manifest",
  "serde_json",
  "slint",
  "slint-build",
@@ -6079,6 +6086,7 @@ dependencies = [
  "clap",
  "confy",
  "efivar",
+ "embed-manifest",
  "grubenv",
  "hadris",
  "input-macro",
