@@ -2,7 +2,7 @@
 
 use std::{thread, time::Duration};
 use anyhow::{Context, Ok, Result};
-use installer::helpers;
+use installer::check_existing_install;
 
 slint::include_modules!(); // generates AppWindow, Step, TaskItem, PartitionOption, TaskState
 
@@ -20,7 +20,7 @@ fn start_check(app: &AppWindow) {
     let weak = app.as_weak();
     thread::spawn(move || {
         thread::sleep(Duration::from_secs(2));
-        let file = helpers::check_existing_install();
+        let file = check_existing_install();
         if file.is_ok() && file.unwrap().is_some() {
              let _ = weak.upgrade_in_event_loop(move |app| app.set_step(Step::Complete));
             //let _ = weak.upgrade_in_event_loop(move |app| app.set_step(Step::InstallReady));
