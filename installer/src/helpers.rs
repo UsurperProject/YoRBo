@@ -17,8 +17,15 @@ pub struct Partition {
     pub size: u64,
     #[serde(rename = "FileSystem")]
     pub partition_type: Option<String>,
+    #[serde(rename = "Type")]
+    pub system_type: Option<String> // If this is "System", then we have our ESP
 }
 
+impl Partition {
+    pub fn ensure_mounted() -> Result<()> {
+        Err(anyhow!("Unimplemented")) // modifies the mountpoint so you can just use that now
+    }
+}
 
 pub fn powershell(arg: &str) -> Result<String> {
     let create_no_window: u32 = 0x08000000;
@@ -31,8 +38,9 @@ pub fn powershell(arg: &str) -> Result<String> {
 }
 
 pub fn list_vols() -> Result<Vec<Partition>> {
-    let ps_command = "ConvertTo-Json -InputObject @(Get-Partition | Select-Object DiskNumber, PartitionNumber, DriveLetter, Size, @{N='FileSystem'; E={($_ | Get-Volume -EA Si).FileSystem}},) -Compress";
+    let ps_command = "ConvertTo-Json -InputObject @(Get-Partition | Select-Object DiskNumber, PartitionNumber, Type, DriveLetter, Size, @{N='FileSystem'; E={($_ | Get-Volume -EA Si).FileSystem}},) -Compress";
     let output = powershell(ps_command)?;
     let partitions: Vec<Partition> = serde_json::from_str(&output)?;
     Ok(partitions)
 }
+

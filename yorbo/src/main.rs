@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     }
     println!("boot partition loaded"); 
     confy::store_path(&cfg_path, &cfg);
-    let partition_letter = toyboot_partition.ensure_mounted().expect("Failed to mount partition");
+    toyboot_partition.ensure_mounted().expect("Failed to mount partition");
     if args.boot == Boot::Iso {
         toyboot::set_iso_boot(&toyboot_partition, args.file.unwrap());
     }

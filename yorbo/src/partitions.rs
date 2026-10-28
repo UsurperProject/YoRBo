@@ -50,7 +50,7 @@ impl PartitionInfo {
             .args(["-NoProfile", "-Command", &ps_script])
             .output()
             .ok().unwrap();
-
+        
         if !output.status.success() {
             return Err(anyhow!("mount failed"));
         }

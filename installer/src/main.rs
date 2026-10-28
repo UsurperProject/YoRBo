@@ -15,7 +15,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn start_check(app: &AppWindow) {
+fn start_checking_installation(app: &AppWindow) {
     let weak = app.as_weak();
     thread::spawn(move || {
         thread::sleep(Duration::from_secs(2));
@@ -60,7 +60,7 @@ fn handle_window(app: &AppWindow) {
 }
 
 fn handle_flow(app: &AppWindow) {
-    start_check(&app);
+    start_checking_installation(&app);
     app.on_finish(move || {slint::quit_event_loop().ok(); });
     app.on_cancel_confirmed(move || {slint::quit_event_loop().ok(); });
 

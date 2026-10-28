@@ -35,5 +35,5 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
 }
 
 pub fn fetch_statics() -> Result<PathBuf> {
-    Err(anyhow!("Unimplemented"))
+    Err(anyhow!("Unimplemented")) // returns a path to the temp archive, must call install_bootloader() with this.
 }
