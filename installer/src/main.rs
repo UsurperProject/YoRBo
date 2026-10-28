@@ -10,7 +10,6 @@ fn main() -> Result<()> {
     let app = AppWindow::new()?;
     app.set_step(Step::Scanning);
     handle_window(&app);
-    start_check(&app);
     handle_flow(&app);
     app.run()?;
     Ok(())
@@ -61,7 +60,9 @@ fn handle_window(app: &AppWindow) {
 }
 
 fn handle_flow(app: &AppWindow) {
-    let w = app.as_weak();
+    start_check(&app);
     app.on_finish(move || {slint::quit_event_loop().ok(); });
     app.on_cancel_confirmed(move || {slint::quit_event_loop().ok(); });
+
+
 }
