@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+rfd = "0.17.2"
 serde = "1.0.229"
 serde_json = "1.0.154"
 slint = "1"
