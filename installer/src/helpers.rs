@@ -22,7 +22,11 @@ pub struct Partition {
 }
 
 impl Partition {
-    pub fn ensure_mounted() -> Result<()> {
+    pub fn ensure_mounted(&self) -> Result<()> {
+        Err(anyhow!("Unimplemented")) // modifies the mountpoint so you can just use that now
+    }
+
+    pub fn shrink(&self, size: u32)  -> Result<Self> {
         Err(anyhow!("Unimplemented")) // modifies the mountpoint so you can just use that now
     }
 }
