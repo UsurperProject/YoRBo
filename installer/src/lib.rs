@@ -136,8 +136,31 @@ pub fn fetch_statics(mut progress: impl FnMut(u64, Option<u64>)) -> Result<PathB
     Ok(path)
 }
 
-pub fn patch_grub(grub: &mut [u8]) -> Result<()> {
-    Err(anyhow!("Unimplemented"))
+pub fn patch_grub(data: &mut [u8]) -> Result<()> {
+    let new_prefix: &[u8] = b"/yorbo";
+    // (type 3, size 24) + b'(,2)/grub\0'
+    // 24 = 8-byte header + 16-byte payload
+    let mut rec = Vec::new();
+    rec.extend_from_slice(&3u32.to_le_bytes());
+    rec.extend_from_slice(&24u32.to_le_bytes());
+    rec.extend_from_slice(b"(,2)/grub\0");
+
+    // Count occurrences
+    let count = data.windows(rec.len()).filter(|w| *w == rec.as_slice()).count();
+    if count != 1 {
+        return Err(anyhow!("wrong build ?"));
+    }
+
+    // Find index
+    let i = data.windows(rec.len()).position(|w| w == rec.as_slice()).unwrap();
+
+    // 16-byte null-padded buffer
+    let mut padded_new = [0u8; 16];
+    let len = new_prefix.len().min(16);
+    padded_new[..len].copy_from_slice(&new_prefix[..len]);
+
+    let start = i + 8;
+    data[start..start + 16].copy_from_slice(&padded_new);
+
+    Ok(())
 }
-
-
