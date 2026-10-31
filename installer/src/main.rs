@@ -1,9 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::{thread, time::Duration};
+use std::{thread, time::{Duration, Instant}};
 
 use anyhow::{Result, anyhow};
 use installer::helpers::{self, Partition};
@@ -17,6 +16,8 @@ const RUNNER_BINARY: &[u8] = include_bytes!("../../target/release/yorbo.exe");
 const DEFAULT_RUNNER_DIR: &str = "C:/Program Files (x86)/YoRBo";
 const BOOTLOADER_PARTITION_MB: u32 = 100;
 const MIN_SCAN_TIME: Duration = Duration::from_secs(2);
+/// GitHub doesn't send a Content-Length for archives, so progress is measured against this.
+const STATICS_APPROX_BYTES: u64 = 20_000_000;
 
 
 fn main() -> Result<()> {
@@ -127,18 +128,22 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
     let cands = candidates.clone();
     app.on_install_runner(move || {
         let app = w.unwrap();
-        let dir = PathBuf::from(app.get_runner_path().as_str());
+        let mut dir = PathBuf::from(app.get_runner_path().as_str());
         app.set_runner_progress(0.0);
         app.set_runner_caption("Copying files…".into());
         app.set_step(Step::InstallingRunner);
 
         let (w, cands) = (w.clone(), cands.clone());
         thread::spawn(move || {
-            let installed =
-                with_estimated_progress(&w, AppWindow::set_runner_progress, || install_runner(dir));
-            if let Err(e) = installed {
+            // install_runner may append "YoRBo" to `dir`, so show the final path afterwards.
+            if let Err(e) = install_runner(&mut dir, RUNNER_BINARY) {
                 return fail(&w, "Couldn't install the runner", &e, Step::RunnerDirectory);
             }
+            let shown = dir.to_string_lossy().to_string();
+            ui(&w, move |a| {
+                a.set_runner_path(shown.into());
+                a.set_runner_progress(1.0);
+            });
 
             ui(&w, |a| a.set_runner_caption("Scanning partitions…".into()));
             match load_candidates() {
@@ -200,21 +205,21 @@ fn run_bootloader_install(
 
     // 1. Decide which drive the boot files go on.
     let drive: char = {
-        let found = cands.lock().unwrap();
+        let mut found = cands.lock().unwrap();
         match target {
             Target::ExistingFat32 => {
-                let mut part = found.fat32.get(index).ok_or_else(|| anyhow!("No partition selected"))?;
-                drive_letter(&mut part)?
+                let part = found.fat32.get_mut(index).ok_or_else(|| anyhow!("No partition selected"))?;
+                drive_letter(part)?
             }
             Target::NewPartition => {
                 let part = found.shrink.get(index).ok_or_else(|| anyhow!("No volume selected"))?;
-                let text = format!("Shrinking {} by 100 MB…", label(part));
+                let text = format!("Shrinking {} by {} MB…", label(part), BOOTLOADER_PARTITION_MB);
                 ui(weak, move |a| {
                     a.set_bootloader_path(text.into());
                     a.set_step(Step::PreparingBootloader);
                 });
-                // Returns the new FAT32 partition; it has no drive letter yet.
-                let new_part = part.shrink(BOOTLOADER_PARTITION_MB)?;
+                // Returns the new, formatted FAT32 partition (already has a drive letter).
+                let mut new_part = part.shrink(BOOTLOADER_PARTITION_MB)?;
                 drive_letter(&mut new_part)?
             }
         }
@@ -225,7 +230,26 @@ fn run_bootloader_install(
         a.set_statics_caption("Downloading…".into());
         a.set_step(Step::DownloadingStatics);
     });
-    let archive = with_estimated_progress(weak, AppWindow::set_statics_progress, fetch_statics)?;
+    let archive = {
+        let weak = weak.clone();
+        let mut last_update = Instant::now() - Duration::from_secs(1);
+        fetch_statics(move |done, total| {
+            // Don't flood the UI thread: ~10 updates a second is plenty.
+            if last_update.elapsed() < Duration::from_millis(100) {
+                return;
+            }
+            last_update = Instant::now();
+            let fraction = (done as f64 / total.unwrap_or(STATICS_APPROX_BYTES) as f64).min(0.99) as f32;
+            let caption = match total {
+                Some(t) => format!("{} / {}", format_size(done), format_size(t)),
+                None => format_size(done),
+            };
+            ui(&weak, move |a| {
+                a.set_statics_progress(fraction);
+                a.set_statics_caption(caption.into());
+            });
+        })?
+    };
 
     ui(weak, move |a| {
         a.set_bootloader_path(format!("{drive}:\\").into());
@@ -323,29 +347,4 @@ fn fail(weak: &Weak<AppWindow>, what: &str, err: &anyhow::Error, back_to: Step) 
         .set_description(format!("{what}.\n\n{err:#}"))
         .show();
     ui(weak, move |a| a.set_step(back_to));
-}
-
-
-fn with_estimated_progress<T>(
-    weak: &Weak<AppWindow>,
-    set: fn(&AppWindow, f32),
-    work: impl FnOnce() -> T,
-) -> T {
-    let done = Arc::new(AtomicBool::new(false));
-    let ticker = {
-        let (weak, done) = (weak.clone(), done.clone());
-        thread::spawn(move || {
-            let mut p = 0.0_f32;
-            while !done.load(Ordering::Relaxed) {
-                p += (0.9 - p) * 0.04;
-                ui(&weak, move |a| set(a, p));
-                thread::sleep(Duration::from_millis(100));
-            }
-        })
-    };
-    let out = work();
-    done.store(true, Ordering::Relaxed);
-    let _ = ticker.join();
-    ui(weak, move |a| set(a, 1.0));
-    out
 }
