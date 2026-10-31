@@ -1,7 +1,10 @@
 pub mod helpers;
-use std::path::{Path, PathBuf};
+use std::{fs, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
 use helpers::powershell;
+
+
+const statics_url: &str = "https://github.com/UsurperProject/YoRBo-statics/archive/refs/heads/main.zip";
 
 pub fn check_existing_install() -> Result<Option<PathBuf>> {
     let expected_path = PathBuf::from("C:/Program Files (x86)/YoRBo/yorbo.exe");
@@ -19,21 +22,42 @@ pub fn check_existing_install() -> Result<Option<PathBuf>> {
         let file2 = drive.join("yorbo/grub.cfg");
         let file3 = drive.join("ventoy/caged_vtoy.img");
         if (file1.try_exists()? && file2.try_exists()? && file3.try_exists()?) {
-            println!("Found ya");
             return Ok(Some(drive));
         }
     }
     return Ok(None);
 }
 
-pub fn install_runner(directory: PathBuf) -> Result<()> {
-    Err(anyhow!("Unimplemented"))
+pub fn install_runner(directory: &mut PathBuf, runner: &[u8]) -> Result<()> {
+    let is_dir_yorbo = directory.file_name()
+    .and_then(|name| name.to_str())
+    .map(|s| s.to_lowercase())
+    .map_or(false, |s| s == "yorbo");
+
+    if !is_dir_yorbo {
+        directory.push("YoRBo");
+        fs::create_dir_all(&*directory)?;
+    }
+    let runner_exe_path = directory.join("yorbo.exe");
+    Ok(fs::write(runner_exe_path, runner)?)
 }
 
 pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
+    /*
+    put zip/ventoy to drive/yorbo
+    put zip/caged_vtoy.img to drive/ventoy/caged_vtoy.img
+    patch grubx64_unmodified.efi and save it as /yorbo/grubx64.efi
+     */
     Err(anyhow!("Unimplemented"))
 }
 
 pub fn fetch_statics() -> Result<PathBuf> {
+    // use ureq to download statics.zip to temp
     Err(anyhow!("Unimplemented")) // returns a path to the temp archive, must call install_bootloader() with this.
 }
+
+pub fn patch_grub(grub: &mut [u8]) -> Result<()> {
+    Err(anyhow!("Unimplemented"))
+}
+
+

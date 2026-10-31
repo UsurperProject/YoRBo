@@ -12,9 +12,12 @@ use slint::{ModelRc, VecModel, Weak};
 
 slint::include_modules!(); // generates AppWindow, Step, TaskItem, PartitionOption, TaskState
 
+const RUNNER_BINARY: &[u8] = include_bytes!("../../target/release/yorbo.exe");
+
 const DEFAULT_RUNNER_DIR: &str = "C:/Program Files (x86)/YoRBo";
 const BOOTLOADER_PARTITION_MB: u32 = 100;
 const MIN_SCAN_TIME: Duration = Duration::from_secs(2);
+
 
 fn main() -> Result<()> {
     let app = AppWindow::new()?;
@@ -62,7 +65,6 @@ fn start_checking_installation(app: &AppWindow) {
     });
 }
 
-
 fn handle_window(app: &AppWindow) {
     let w = app.as_weak();
     app.on_window_drag(move |dx, dy| {
@@ -91,7 +93,6 @@ fn handle_window(app: &AppWindow) {
     });
 }
 
-
 fn handle_flow(app: &AppWindow, candidates: &Shared) {
     // Ready to install -> Install location
     let w = app.as_weak();
@@ -108,7 +109,6 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
         }
     });
 
-    // Browse… (native folder picker; blocking, so off the UI thread)
     let w = app.as_weak();
     app.on_browse_runner(move || {
         let w = w.clone();
@@ -123,7 +123,6 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
         });
     });
 
-    // Install location -> install the runner, then look up partitions
     let w = app.as_weak();
     let cands = candidates.clone();
     app.on_install_runner(move || {
@@ -183,7 +182,6 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
     });
 }
 
-/// Bootloader destination -> download statics -> write boot files -> done.
 fn install_bootloader_async(weak: Weak<AppWindow>, cands: Shared, target: Target, index: i32) {
     thread::spawn(move || {
         if let Err(e) = run_bootloader_install(&weak, &cands, target, index) {
@@ -205,8 +203,8 @@ fn run_bootloader_install(
         let found = cands.lock().unwrap();
         match target {
             Target::ExistingFat32 => {
-                let part = found.fat32.get(index).ok_or_else(|| anyhow!("No partition selected"))?;
-                drive_letter(part)?
+                let mut part = found.fat32.get(index).ok_or_else(|| anyhow!("No partition selected"))?;
+                drive_letter(&mut part)?
             }
             Target::NewPartition => {
                 let part = found.shrink.get(index).ok_or_else(|| anyhow!("No volume selected"))?;
@@ -217,7 +215,7 @@ fn run_bootloader_install(
                 });
                 // Returns the new FAT32 partition; it has no drive letter yet.
                 let new_part = part.shrink(BOOTLOADER_PARTITION_MB)?;
-                drive_letter(&new_part)?
+                drive_letter(&mut new_part)?
             }
         }
     };
@@ -265,7 +263,7 @@ fn is_esp(p: &Partition) -> bool {
 
 /// Drive letter of `p`, mounting it first if it has none (the EFI partition and
 /// freshly created partitions usually don't).
-fn drive_letter(p: &Partition) -> Result<char> {
+fn drive_letter(p: &mut Partition) -> Result<char> {
     if p.mountpoint.is_none() {
         p.ensure_mounted()?; // expected to fill in `p.mountpoint`
     }
