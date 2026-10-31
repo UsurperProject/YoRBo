@@ -109,7 +109,7 @@ pub fn set_ventoy_boot(partition: &PartitionInfo) -> Result<()> {
 pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     const DESC: &str = "YoRBo";
     // Cuz apparently microsoft got their hands on uefi too
-    const EFI_PATH: &str = r"\EFI\BOOT\grubx64.efi";
+    const EFI_PATH: &str = r"\EFI\BOOT\yorbox64.efi";
     let Some(mountpoint) = partition.mountpoint.as_ref() else {
         return Err(anyhow!("partition not mounted"));
     };

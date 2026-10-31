@@ -22,7 +22,7 @@ pub fn check_existing_install() -> Result<Option<PathBuf>> {
     println!("searching drives: {}", json_str);
     let drives: Vec<PathBuf> = serde_json::from_str(&json_str)?;
     for drive in drives {
-        let file1 = drive.join("EFI/BOOT/grubx64.efi");
+        let file1 = drive.join("EFI/BOOT/yorbox64.efi");
         let file2 = drive.join("yorbo/grub.cfg");
         let file3 = drive.join("ventoy/caged_vtoy.img");
         if (file1.try_exists()? && file2.try_exists()? && file3.try_exists()?) {
@@ -49,7 +49,7 @@ pub fn install_runner(directory: &mut PathBuf, runner: &[u8]) -> Result<()> {
 ///   zip/yorbo/**                -> drive:/yorbo/**
 ///   zip/grub.cfg                -> drive:/yorbo/grub.cfg
 ///   zip/caged_vtoy.img          -> drive:/ventoy/caged_vtoy.img
-///   zip/grubx64_unmodified.efi  -> patch_grub() -> drive:/EFI/BOOT/grubx64.efi
+///   zip/grubx64_unmodified.efi  -> patch_grub() -> drive:/EFI/BOOT/yorbox64.efi
 pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
     let root = PathBuf::from(format!("{drive}:\\"));
     let mut zip = ZipArchive::new(BufReader::new(File::open(&bootloader)?))?;
@@ -97,12 +97,8 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
         io::copy(&mut zip.by_index(i)?, &mut File::create(&dest)?)?;
     }
 
-    let grub_dest = root.join("EFI/BOOT/grubx64.efi");
+    let grub_dest = root.join("EFI/BOOT/yorbox64.efi");
     fs::create_dir_all(grub_dest.parent().unwrap())?;
-    let backup = grub_dest.with_extension("efi.yorbo-backup");
-    if grub_dest.exists() && !backup.exists() {
-        fs::copy(&grub_dest, &backup)?;
-    }
     fs::write(&grub_dest, &grub)?;
 
     let _ = fs::remove_file(&bootloader);

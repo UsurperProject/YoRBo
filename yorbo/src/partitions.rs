@@ -69,7 +69,7 @@ impl PartitionInfo {
         let base_path = format!("{}:\\", self.mountpoint.as_ref().unwrap());
         #[cfg(linux)]
         let base_path = format!("{}/", mountpoint);
-        let file1 = Path::new(&base_path).join("EFI/BOOT/grubx64.efi");
+        let file1 = Path::new(&base_path).join("EFI/BOOT/yorbox64.efi");
         let file2 = Path::new(&base_path).join("yorbo/grub.cfg");
         let file3 = Path::new(&base_path).join("ventoy/caged_vtoy.img");
 
