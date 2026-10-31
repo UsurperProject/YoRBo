@@ -2,9 +2,12 @@ pub mod helpers;
 use std::{fs::{self, File}, io::{self, BufReader, Read, Write}, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
 use helpers::{ProgressWriter, free_space, powershell};
+use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};
 use zip::ZipArchive;
 
 
+const VENTOY_ICON: &[u8] = include_bytes!("../../icons/ventoy.ico");
+const IMAGE_TYPES: [&str; 7] = ["iso", "img", "wim", "efi", "vhd", "vhdx", "vtoy"];
 const STATICS_URL: &str = "https://github.com/UsurperProject/YoRBo-statics/archive/refs/heads/main.zip";
 
 pub fn check_existing_install() -> Result<Option<PathBuf>> {
@@ -60,7 +63,6 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
         if !entry.is_file() {
             continue;
         }
-        // GitHub wraps the repo in a "YoRBo-statics-main/" folder; drop it.
         let Some(rel) = entry.enclosed_name().map(|n| n.components().skip(1).collect::<PathBuf>()) else {
             continue;
         };
@@ -76,7 +78,6 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
         return Err(anyhow!("the statics archive has no caged_vtoy.img"));
     }
 
-    // Patch grub first: if that fails we haven't written anything yet.
     let mut grub = Vec::new();
     zip.by_index(grub_index)?.read_to_end(&mut grub)?;
     patch_grub(&mut grub)?;
@@ -96,7 +97,6 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
         io::copy(&mut zip.by_index(i)?, &mut File::create(&dest)?)?;
     }
 
-    // Keep whatever grubx64.efi was already there (e.g. a Linux install's) once.
     let grub_dest = root.join("EFI/BOOT/grubx64.efi");
     fs::create_dir_all(grub_dest.parent().unwrap())?;
     let backup = grub_dest.with_extension("efi.yorbo-backup");
@@ -138,8 +138,7 @@ pub fn fetch_statics(mut progress: impl FnMut(u64, Option<u64>)) -> Result<PathB
 
 pub fn patch_grub(data: &mut [u8]) -> Result<()> {
     let new_prefix: &[u8] = b"/yorbo";
-    // (type 3, size 24) + b'(,2)/grub\0'
-    // 24 = 8-byte header + 16-byte payload
+    // ('<II', 3, 24) + b'(,2)/grub\0'
     let mut rec = Vec::new();
     rec.extend_from_slice(&3u32.to_le_bytes());
     rec.extend_from_slice(&24u32.to_le_bytes());
@@ -162,5 +161,48 @@ pub fn patch_grub(data: &mut [u8]) -> Result<()> {
     let start = i + 8;
     data[start..start + 16].copy_from_slice(&padded_new);
 
+    Ok(())
+}
+
+// ############ Post-install##################
+pub fn create_ventoy_shortcut(runner_dir: &Path) -> Result<()> {
+    let exe = runner_dir.join("yorbo.exe");
+    let icon = runner_dir.join("ventoy.ico");
+    fs::write(&icon, VENTOY_ICON)?;
+
+    let q = |p: &Path| p.to_string_lossy().replace('\'', "''"); // for PowerShell '...' strings
+    powershell(&format!(
+        r#"
+        $lnk = Join-Path ([Environment]::GetFolderPath('CommonDesktopDirectory')) 'Boot into Ventoy.lnk'
+        $s = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
+        $s.TargetPath = '{exe}'
+        $s.Arguments = '-b ventoy -r'
+        $s.WorkingDirectory = '{dir}'
+        $s.IconLocation = '{icon},0'
+        $s.Description = 'Reboot into Ventoy with YoRBo'
+        $s.Save()
+        "#,
+        exe = q(&exe),
+        dir = q(runner_dir),
+        icon = q(&icon),
+    ))?;
+    Ok(())
+}
+
+pub fn register_context_menu(runner_dir: &Path) -> Result<()> {
+    let exe = runner_dir.join("yorbo.exe");
+    let exe = exe.display();
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+
+    for ext in IMAGE_TYPES {
+        let (verb, _) = hklm.create_subkey(format!(
+            r"SOFTWARE\Classes\SystemFileAssociations\.{ext}\shell\YoRBo"
+        ))?;
+        verb.set_value("", &"Boot once with YoRBo")?;
+        verb.set_value("Icon", &format!("\"{exe}\",0"))?;
+        verb.set_value("MultiSelectModel", &"Single")?; // hidden when several files are selected
+        let (command, _) = verb.create_subkey("command")?;
+        command.set_value("", &format!("\"{exe}\" -b iso -f \"%1\" -r"))?;
+    }
     Ok(())
 }

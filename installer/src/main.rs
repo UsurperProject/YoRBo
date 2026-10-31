@@ -1,12 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::{thread, time::{Duration, Instant}};
 
 use anyhow::{Result, anyhow};
 use installer::helpers::{self, Partition};
-use installer::{check_existing_install, fetch_statics, install_bootloader, install_runner};
+use installer::{
+    check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader, install_runner,
+    register_context_menu,
+};
 use slint::{ModelRc, VecModel, Weak};
 
 slint::include_modules!(); // generates AppWindow, Step, TaskItem, PartitionOption, TaskState
@@ -170,12 +173,14 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
     let w = app.as_weak();
     let cands = candidates.clone();
     app.on_continue_existing(move |i| {
-        install_bootloader_async(w.clone(), cands.clone(), Target::ExistingFat32, i)
+        let runner_dir = PathBuf::from(w.unwrap().get_runner_path().as_str());
+        install_bootloader_async(w.clone(), cands.clone(), runner_dir, Target::ExistingFat32, i)
     });
     let w = app.as_weak();
     let cands = candidates.clone();
     app.on_create_partition(move |i| {
-        install_bootloader_async(w.clone(), cands.clone(), Target::NewPartition, i)
+        let runner_dir = PathBuf::from(w.unwrap().get_runner_path().as_str());
+        install_bootloader_async(w.clone(), cands.clone(), runner_dir, Target::NewPartition, i)
     });
 
 
@@ -187,9 +192,15 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
     });
 }
 
-fn install_bootloader_async(weak: Weak<AppWindow>, cands: Shared, target: Target, index: i32) {
+fn install_bootloader_async(
+    weak: Weak<AppWindow>,
+    cands: Shared,
+    runner_dir: PathBuf,
+    target: Target,
+    index: i32,
+) {
     thread::spawn(move || {
-        if let Err(e) = run_bootloader_install(&weak, &cands, target, index) {
+        if let Err(e) = run_bootloader_install(&weak, &cands, &runner_dir, target, index) {
             fail(&weak, "Couldn't set up the bootloader", &e, Step::BootloaderChoice);
         }
     });
@@ -198,6 +209,7 @@ fn install_bootloader_async(weak: Weak<AppWindow>, cands: Shared, target: Target
 fn run_bootloader_install(
     weak: &Weak<AppWindow>,
     cands: &Shared,
+    runner_dir: &Path,
     target: Target,
     index: i32,
 ) -> Result<()> {
@@ -257,9 +269,56 @@ fn run_bootloader_install(
     });
     install_bootloader(drive, archive)?;
 
-    // There are no post-install hooks in the lib yet, so Step::PostInstall is skipped.
+    run_post_install(weak, runner_dir);
     ui(weak, |a| a.set_step(Step::Complete));
     Ok(())
+}
+
+/// Shortcut + right-click menu. The bootloader is already installed at this point, so a
+/// failure here is reported but doesn't undo anything or stop the install.
+fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path) {
+    type Task = fn(&Path) -> Result<()>;
+    let tasks: [(&str, Task); 2] = [
+        ("Create “Boot into Ventoy” shortcut", create_ventoy_shortcut),
+        ("Add “Boot once with YoRBo” to the right-click menu", register_context_menu),
+    ];
+
+    let mut rows: Vec<(String, TaskState)> =
+        tasks.iter().map(|(title, _)| (title.to_string(), TaskState::Queued)).collect();
+    show_tasks(weak, &rows);
+    ui(weak, |a| a.set_step(Step::PostInstall));
+
+    let mut failures = Vec::new();
+    for (i, (_, run)) in tasks.iter().enumerate() {
+        rows[i].1 = TaskState::Running;
+        show_tasks(weak, &rows);
+        thread::sleep(Duration::from_millis(400)); // long enough to see; the tasks are instant
+        if let Err(e) = run(runner_dir) {
+            failures.push(format!("{}: {e:#}", tasks[i].0));
+            rows[i].0.push_str(" (failed)");
+        }
+        rows[i].1 = TaskState::Done;
+        show_tasks(weak, &rows);
+    }
+
+    if !failures.is_empty() {
+        let _ = rfd::MessageDialog::new()
+            .set_level(rfd::MessageLevel::Warning)
+            .set_title("YoRBo Setup")
+            .set_description(format!(
+                "YoRBo is installed, but some extras couldn't be set up:\n\n{}",
+                failures.join("\n")
+            ))
+            .show();
+    }
+}
+
+fn show_tasks(weak: &Weak<AppWindow>, rows: &[(String, TaskState)]) {
+    let items: Vec<TaskItem> = rows
+        .iter()
+        .map(|(title, state)| TaskItem { title: title.as_str().into(), detail: "".into(), state: *state })
+        .collect();
+    ui(weak, move |a| a.set_tasks(ModelRc::new(VecModel::from(items))));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
