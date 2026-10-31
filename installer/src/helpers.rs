@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::os::windows::process::CommandExt;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Partition {
     #[serde(rename = "DiskNumber")]
     pub disk_number: u32,
@@ -22,8 +22,27 @@ pub struct Partition {
 }
 
 impl Partition {
-    pub fn ensure_mounted(&self) -> Result<()> {
-        Err(anyhow!("Unimplemented")) // modifies the mountpoint so you can just use that now
+    pub fn ensure_mounted(&mut self) -> Result<String> {
+        if let Some(mp) = &self.mountpoint {
+            return Ok(self.mountpoint.as_ref().unwrap().to_string());
+        }
+
+        let ps_script = format!(
+            r#"
+            $disk = {}
+            $part = {}
+            $freeLetter = 68..90 | ForEach-Object {{ [char]$_ }} | Where-Object {{ -not (Test-Path "$_:\") }} | Select-Object -First 1
+            if ($freeLetter) {{
+                Set-Partition -DiskNumber $disk -PartitionNumber $part -NewDriveLetter $freeLetter
+                Write-Output $freeLetter
+            }}
+            "#,
+            self.disk_number, self.partition_number
+        );
+
+        let letter = powershell(&ps_script)?;
+        self.mountpoint = Some(letter.to_string());
+        Ok(letter)
     }
 
     pub fn shrink(&self, size: u32)  -> Result<Self> {
