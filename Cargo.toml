@@ -1,3 +1,9 @@
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = "z"
+
 [workspace]
 members = ["installer","yorbo"]
 resolver = "3"

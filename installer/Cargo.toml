@@ -10,8 +10,10 @@ serde = "1.0.229"
 serde_json = "1.0.154"
 slint = "1"
 ureq = "3.5.0"
+winreg = "0.56.0"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 slint-build = "1"
 embed-manifest = "1.5.1"
+winresource = "0.1.34"

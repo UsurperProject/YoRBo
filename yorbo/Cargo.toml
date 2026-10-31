@@ -17,3 +17,4 @@ uuid = "1.28.0"
 
 [build-dependencies]
 embed-manifest = "1.5.1"
+winresource = "0.1.34"
