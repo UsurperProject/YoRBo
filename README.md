@@ -30,7 +30,7 @@ Compatibility and functionality are expected to grow as the project matures.
 
 ## Roadmap
 
-- [ ] **WIP ⚠️** Windows installer
+- [x] Windows installer (Early Alpha)
 - [ ] Linux support and installer
 - [ ] Secure Boot
 - [ ] MBR Supprt
