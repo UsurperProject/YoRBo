@@ -18,6 +18,8 @@ const RUNNER_BINARY: &[u8] = include_bytes!("../../target/release/yorbo.exe");
 
 const DEFAULT_RUNNER_DIR: &str = "C:/Program Files (x86)/YoRBo";
 const BOOTLOADER_PARTITION_MB: u32 = 100;
+/// Drives with less free space than this aren't offered, for either dropdown.
+const MIN_FREE_BYTES: u64 = 70 * 1024 * 1024;
 const MIN_SCAN_TIME: Duration = Duration::from_secs(2);
 /// GitHub doesn't send a Content-Length for archives, so progress is measured against this.
 const STATICS_APPROX_BYTES: u64 = 20_000_000;
@@ -150,6 +152,15 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
 
             ui(&w, |a| a.set_runner_caption("Scanning partitions…".into()));
             match load_candidates() {
+                Ok(found) if found.fat32.is_empty() && found.shrink.is_empty() => fail(
+                    &w,
+                    "No usable partition",
+                    &anyhow!(
+                        "YoRBo needs a FAT32 partition, or an NTFS volume, with at least {} MB free.",
+                        MIN_FREE_BYTES >> 20
+                    ),
+                    Step::RunnerDirectory,
+                ),
                 Ok(found) => {
                     let fat32 = options(&found.fat32);
                     let shrink = options(&found.shrink);
@@ -332,6 +343,10 @@ fn show_tasks(weak: &Weak<AppWindow>, rows: &[(String, TaskState)]) {
 fn load_candidates() -> Result<Candidates> {
     let mut found = Candidates::default();
     for p in helpers::list_vols()? {
+        // Unknown free space (None) is let through; install_bootloader checks again before writing.
+        if p.free.is_some_and(|free| free < MIN_FREE_BYTES) {
+            continue;
+        }
         let fs = p.partition_type.as_deref().map(str::to_ascii_uppercase);
         match fs.as_deref() {
             Some("FAT32") => found.fat32.push(p),

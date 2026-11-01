@@ -23,6 +23,8 @@ pub struct Partition {
     pub system_type: Option<String>, // If this is "System", then we have our ESP
     #[serde(rename = "Guid")]
     pub guid: Uuid,
+    #[serde(rename = "SizeRemaining")]
+    pub free: Option<u64>, // free bytes on the volume; None if Windows can't say
 }
 
 impl Partition {
@@ -127,7 +129,8 @@ const PARTITION_FIELDS: &str = "DiskNumber, PartitionNumber, \
     @{N='DriveLetter'; E={if ([int]$_.DriveLetter -ne 0) {[string]$_.DriveLetter} else {$null}}}, \
     Size, \
     @{N='FileSystem'; E={($_ | Get-Volume -EA SilentlyContinue).FileSystem}}, \
-    @{N='Guid'; E={if ($_.Guid) {[string]$_.Guid} else {'00000000-0000-0000-0000-000000000000'}}}";
+    @{N='Guid'; E={if ($_.Guid) {[string]$_.Guid} else {'00000000-0000-0000-0000-000000000000'}}}, \
+    @{N='SizeRemaining'; E={($_ | Get-Volume -EA SilentlyContinue).SizeRemaining}}";
 
 pub fn list_vols() -> Result<Vec<Partition>> {
     let ps_command = format!(
