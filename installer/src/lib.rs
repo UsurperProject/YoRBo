@@ -1,7 +1,9 @@
 pub mod helpers;
 use std::{fs::{self, File}, io::{self, BufReader, Read, Write}, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
-use helpers::{ProgressWriter, free_space, powershell};
+use helpers::{Partition, ProgressWriter, free_space, powershell};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};
 use zip::ZipArchive;
 
@@ -161,6 +163,31 @@ pub fn patch_grub(data: &mut [u8]) -> Result<()> {
 }
 
 // ############ Post-install##################
+
+/// Same shape (and same `confy` format) as `yorbo/src/config.rs`; keep the two in sync.
+#[derive(Serialize, Deserialize, Default)]
+struct Config {
+    partition: Option<(u32, u32)>,
+    guid: Uuid,
+}
+
+/// Creates `<runner_dir>\config` (or updates it if a previous install left one) so
+/// `yorbo.exe` knows which partition holds the bootloader. The runner finds it by GUID.
+pub fn write_config(runner_dir: &Path, bootloader: &Partition) -> Result<()> {
+    if bootloader.guid.is_nil() {
+        return Err(anyhow!(
+            "partition {} on disk {} has no GUID (UEFI boot needs a GPT disk)",
+            bootloader.partition_number,
+            bootloader.disk_number
+        ));
+    }
+    let path = runner_dir.join("config"); // the runner reads <its own dir>\config
+    let mut config: Config = confy::load_path(&path).unwrap_or_default();
+    config.partition = Some((bootloader.disk_number, bootloader.partition_number));
+    config.guid = bootloader.guid;
+    confy::store_path(&path, &config)?;
+    Ok(())
+}
 pub fn create_ventoy_shortcut(runner_dir: &Path) -> Result<()> {
     let exe = runner_dir.join("yorbo.exe");
     let icon = runner_dir.join("ventoy.ico");

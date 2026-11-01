@@ -5,11 +5,13 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+confy = "2.0.0"
 rfd = "0.17.2"
 serde = "1.0.229"
 serde_json = "1.0.154"
 slint = "1"
 ureq = "3.5.0"
+uuid = "1.29.0"
 winreg = "0.56.0"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 

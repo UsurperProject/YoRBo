@@ -24,8 +24,6 @@ pub struct PartitionInfo {
     pub offset: u64
 }
 
-
-
 impl PartitionInfo {
     #[cfg(windows)]
     pub fn ensure_mounted(&self) -> Result<()> {

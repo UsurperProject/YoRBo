@@ -8,7 +8,7 @@ use anyhow::{Result, anyhow};
 use installer::helpers::{self, Partition};
 use installer::{
     check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader, install_runner,
-    register_context_menu,
+    register_context_menu, write_config,
 };
 use slint::{ModelRc, VecModel, Weak};
 
@@ -216,12 +216,12 @@ fn run_bootloader_install(
     let index = usize::try_from(index).map_err(|_| anyhow!("No partition selected"))?;
 
     // 1. Decide which drive the boot files go on.
-    let drive: char = {
+    let (drive, boot_partition): (char, Partition) = {
         let mut found = cands.lock().unwrap();
         match target {
             Target::ExistingFat32 => {
                 let part = found.fat32.get_mut(index).ok_or_else(|| anyhow!("No partition selected"))?;
-                drive_letter(part)?
+                (drive_letter(part)?, part.clone())
             }
             Target::NewPartition => {
                 let part = found.shrink.get(index).ok_or_else(|| anyhow!("No volume selected"))?;
@@ -232,7 +232,7 @@ fn run_bootloader_install(
                 });
                 // Returns the new, formatted FAT32 partition (already has a drive letter).
                 let mut new_part = part.shrink(BOOTLOADER_PARTITION_MB)?;
-                drive_letter(&mut new_part)?
+                (drive_letter(&mut new_part)?, new_part)
             }
         }
     };
@@ -269,18 +269,22 @@ fn run_bootloader_install(
     });
     install_bootloader(drive, archive)?;
 
-    run_post_install(weak, runner_dir);
+    run_post_install(weak, runner_dir, &boot_partition);
     ui(weak, |a| a.set_step(Step::Complete));
     Ok(())
 }
 
-/// Shortcut + right-click menu. The bootloader is already installed at this point, so a
+/// Config file, shortcut, right-click menu. The bootloader is already installed at this point, so a
 /// failure here is reported but doesn't undo anything or stop the install.
-fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path) {
-    type Task = fn(&Path) -> Result<()>;
-    let tasks: [(&str, Task); 2] = [
-        ("Create “Boot into Ventoy” shortcut", create_ventoy_shortcut),
-        ("Add “Boot once with YoRBo” to the right-click menu", register_context_menu),
+fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path, boot: &Partition) {
+    type Task<'a> = Box<dyn Fn() -> Result<()> + 'a>;
+    let tasks: Vec<(&str, Task)> = vec![
+        ("Save YoRBo's configuration", Box::new(|| write_config(runner_dir, boot))),
+        ("Create “Boot into Ventoy” shortcut", Box::new(|| create_ventoy_shortcut(runner_dir))),
+        (
+            "Add “Boot once with YoRBo” to the right-click menu",
+            Box::new(|| register_context_menu(runner_dir)),
+        ),
     ];
 
     let mut rows: Vec<(String, TaskState)> =
@@ -293,7 +297,7 @@ fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path) {
         rows[i].1 = TaskState::Running;
         show_tasks(weak, &rows);
         thread::sleep(Duration::from_millis(400)); // long enough to see; the tasks are instant
-        if let Err(e) = run(runner_dir) {
+        if let Err(e) = run() {
             failures.push(format!("{}: {e:#}", tasks[i].0));
             rows[i].0.push_str(" (failed)");
         }

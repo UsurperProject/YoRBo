@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
 use std::process::Command;
 use std::os::windows::process::CommandExt;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Partition {
@@ -19,7 +20,9 @@ pub struct Partition {
     #[serde(rename = "FileSystem")]
     pub partition_type: Option<String>,
     #[serde(rename = "Type")]
-    pub system_type: Option<String> // If this is "System", then we have our ESP
+    pub system_type: Option<String>, // If this is "System", then we have our ESP
+    #[serde(rename = "Guid")]
+    pub guid: Uuid,
 }
 
 impl Partition {
@@ -123,7 +126,8 @@ const PARTITION_FIELDS: &str = "DiskNumber, PartitionNumber, \
     @{N='Type'; E={[string]$_.Type}}, \
     @{N='DriveLetter'; E={if ([int]$_.DriveLetter -ne 0) {[string]$_.DriveLetter} else {$null}}}, \
     Size, \
-    @{N='FileSystem'; E={($_ | Get-Volume -EA SilentlyContinue).FileSystem}}";
+    @{N='FileSystem'; E={($_ | Get-Volume -EA SilentlyContinue).FileSystem}}, \
+    @{N='Guid'; E={if ($_.Guid) {[string]$_.Guid} else {'00000000-0000-0000-0000-000000000000'}}}";
 
 pub fn list_vols() -> Result<Vec<Partition>> {
     let ps_command = format!(
