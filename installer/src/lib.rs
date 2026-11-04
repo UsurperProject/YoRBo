@@ -214,7 +214,7 @@ pub fn create_ventoy_shortcut(runner_dir: &Path) -> Result<()> {
 
 pub fn register_context_menu(runner_dir: &Path) -> Result<()> {
     let exe = runner_dir.join("yorbo.exe");
-    let exe = exe.display();
+    let exe = exe.to_string_lossy().replace("/", "\\");
     let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
 
     for ext in IMAGE_TYPES {
