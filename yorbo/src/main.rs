@@ -21,28 +21,21 @@ enum Boot{
 #[derive(Parser, Debug)]
 struct Args{
     #[arg(short, long)]
-    boot: Option<Boot>,
+    boot: Boot,
     #[arg(short, long)]
     file: Option<PathBuf>,
     #[arg(short, long)]
-    reboot: bool,
-    #[arg(short, long)]
-    version: bool
+    reboot: bool
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    if args.version {
-        println!("{}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
-    }
-
-    if matches!(args.boot.unwrap(), Boot::Iso) && args.file.is_none() {
+    if matches!(args.boot, Boot::Iso) && args.file.is_none() {
             eprintln!("Error: The --file or -f argument is required when --boot is set to 'iso'.");
             std::process::exit(1);
         }
 
-    if !matches!(args.boot.unwrap(), Boot::Iso) && args.file.is_some() {
+    if !matches!(args.boot, Boot::Iso) && args.file.is_some() {
         eprintln!("Error: The --file or -f argument is only valid when --boot is set to 'iso'.");
         std::process::exit(1);
     }
@@ -68,11 +61,11 @@ fn main() -> Result<()> {
     println!("boot partition loaded"); 
     confy::store_path(&cfg_path, &cfg);
     toyboot_partition.ensure_mounted().expect("Failed to mount partition");
-    if args.boot.unwrap() == Boot::Iso {
+    if args.boot == Boot::Iso {
         toyboot::set_iso_boot(&toyboot_partition, args.file.unwrap());
     }
 
-    else if args.boot.unwrap() == Boot::Ventoy {
+    else if args.boot == Boot::Ventoy {
         toyboot::set_ventoy_boot(&toyboot_partition);
     }
 
