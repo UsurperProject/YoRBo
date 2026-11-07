@@ -205,7 +205,7 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
     
     let mut env = GrubEnv::load(&grubenv_path)
         .context("failed to load grubenv after ensure_nvram_entry")?;
-    env.set("boot_once", "true")
+    env.set("boot_once", "true") //This is unnecessary for now since the feature this is intended for is stubbed out in yorbo-statics
         .context("failed to set boot_once=true")?;
 
     // BootNext is a single u16 (little-endian) holding the Boot#### id
