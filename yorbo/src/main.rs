@@ -64,11 +64,11 @@ fn main() -> Result<()> {
     if args.boot == Boot::Iso {
         toyboot::set_iso_boot(&toyboot_partition, args.file.unwrap());
     }
-
     else if args.boot == Boot::Ventoy {
         toyboot::set_ventoy_boot(&toyboot_partition);
     }
 
+    toyboot::ensure_nvram_entry(&toyboot_partition)?;
     if args.reboot {
         toyboot::toyboot(&toyboot_partition)?;
     }

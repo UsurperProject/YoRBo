@@ -19,10 +19,6 @@ use efivar::boot::{
 };
 use efivar::efi::{Variable, VariableFlags};
 
-
-
-
-
 type FatVolume = Volume<hadris::fat::exfat::sync::ExFatFs<hadris::storage::Partition<FileDevice>>>;
 
 fn get_fat_volume(partition: &PartitionInfo) -> Result<FatVolume> {
