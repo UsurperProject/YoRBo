@@ -231,3 +231,15 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
         .context("failed to run reboot")?;
     Ok(())
 }
+
+pub fn add_to_boot_order(partition: &PartitionInfo) -> Result<()> {
+    let Some(mountpoint) = partition.mountpoint.as_ref() else {
+        return Err(anyhow!("partition not mounted"));
+    };
+    println!("Ensuring NVRAM entry");
+    let id = ensure_nvram_entry(partition)?;
+    let mut manager = efivar::system();
+    let mut boot_order = manager.get_boot_order()?;
+    boot_order.push(id);
+    Ok(manager.set_boot_order(boot_order)?)
+}

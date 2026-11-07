@@ -25,7 +25,9 @@ struct Args{
     #[arg(short, long)]
     file: Option<PathBuf>,
     #[arg(short, long)]
-    reboot: bool
+    reboot: bool,
+    #[arg(long)]
+    permanent_entry: bool
 }
 
 fn main() -> Result<()> {
@@ -68,7 +70,12 @@ fn main() -> Result<()> {
         toyboot::set_ventoy_boot(&toyboot_partition);
     }
 
-    toyboot::ensure_nvram_entry(&toyboot_partition)?;
+    if args.permanent_entry {
+        toyboot::add_to_boot_order(&toyboot_partition)?;
+    } else if !(args.reboot) {
+        toyboot::ensure_nvram_entry(&toyboot_partition)?;
+    }
+
     if args.reboot {
         toyboot::toyboot(&toyboot_partition)?;
     }
