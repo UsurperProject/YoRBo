@@ -140,7 +140,7 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
         }
         let Ok(entry) = BootEntry::read(&*manager, var) else { continue };
         if let Some(fpl) = &entry.file_path_list {
-            if fpl.hard_drive.partition_sig == partition.guid
+            if partition.guid.is_some() && fpl.hard_drive.partition_sig == partition.guid.unwrap()
                 && fpl.file_path.path.eq_ignore_ascii_case(EFI_PATH)
             {
                 matched = Some((id, entry));
@@ -172,7 +172,7 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
                         partition_number: partition.partition_number,
                         partition_start: partition.offset,
                         partition_size: partition.size,
-                        partition_sig: partition.guid,
+                        partition_sig: partition.guid.expect("Booting from MBR drive is not supported"),
                         format: 2,
                         sig_type: EFIHardDriveType::Gpt
                     }

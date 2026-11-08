@@ -19,7 +19,7 @@ pub struct PartitionInfo {
     #[serde(rename = "FileSystem")]
     pub partition_type: Option<String>,
     #[serde(rename = "Guid")]
-    pub guid: Uuid,
+    pub guid: Option<Uuid>,
     #[serde(rename = "Offset")]
     pub offset: u64
 }
@@ -102,7 +102,7 @@ pub fn get_partitions() -> Result<Vec<PartitionInfo>> {
 pub fn find(guid: Uuid) -> Result<PartitionInfo> {
     let partitions = get_partitions()?;
     for partition in partitions {
-        if partition.guid == guid {
+        if partition.guid.is_some() && partition.guid.unwrap() == guid {
             return Ok(partition);
         }
     }

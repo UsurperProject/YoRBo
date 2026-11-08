@@ -102,7 +102,7 @@ fn reconfigure() -> Result<Config> {
     let selected_partition = partitions.get(selected_partition_num -1).expect("Please enter a valid number. quitting");
     if selected_partition.verify_format()? {
         return Ok(Config{
-            guid: selected_partition.guid,
+            guid: selected_partition.guid.expect("Booting from MBR drive is not supported"),
             partition: None
         });
     }
