@@ -5,5 +5,5 @@ codegen-units = 1
 opt-level = "z"
 
 [workspace]
-members = ["installer","yorbo"]
+members = ["installer","yorbo","commons"]
 resolver = "3"
