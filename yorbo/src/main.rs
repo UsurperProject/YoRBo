@@ -3,10 +3,11 @@ mod partitions;
 mod toyboot;
 mod vlnk;
 
-use std::path::PathBuf;
+use std::{any, path::PathBuf};
 use std::env::current_exe;
+use anyhow::{Result, Context};
+use commons::error_handler::show_err;
 
-use anyhow::{Context, Result};
 use hadris::fs::Stored::No;
 use input_macro::input;
 use config::Config;
@@ -30,16 +31,28 @@ struct Args{
     permanent_entry: bool
 }
 
-fn main() -> Result<()> {
+fn main() { // shim main for graphical error handling
+    if let Err(e) = real_main() {
+        let msg = format!("{}", e);
+        
+        if cfg!(not(debug_assertions)) {
+            show_err(msg.clone());
+        }
+        
+        eprintln!("error: {msg}");
+        std::process::exit(1);
+    }
+}
+
+
+fn real_main() -> Result<()> { 
     let args = Args::parse();
     if matches!(args.boot, Boot::Iso) && args.file.is_none() {
-            eprintln!("Error: The --file or -f argument is required when --boot is set to 'iso'.");
-            std::process::exit(1);
+        anyhow::bail!("The --file or -f argument is required when --boot is set to 'iso'.");
         }
 
     if !matches!(args.boot, Boot::Iso) && args.file.is_some() {
-        eprintln!("Error: The --file or -f argument is only valid when --boot is set to 'iso'.");
-        std::process::exit(1);
+        anyhow::bail!("The --file or -f argument is only valid when --boot is set to 'iso'.");
     }
 
     let mut cfg_path = current_exe().context("i got alzheimers")?;
