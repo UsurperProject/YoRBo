@@ -8,7 +8,11 @@ pub struct ProgressWriter<W: Write, F: FnMut(u64)> {
 
 impl<W: Write, F: FnMut(u64)> ProgressWriter<W, F> {
     pub fn new(inner: W, on_write: F) -> Self {
-        Self { inner, written: 0, on_write }
+        Self {
+            inner,
+            written: 0,
+            on_write,
+        }
     }
 }
 
@@ -24,4 +28,3 @@ impl<W: Write, F: FnMut(u64)> Write for ProgressWriter<W, F> {
         self.inner.flush()
     }
 }
-

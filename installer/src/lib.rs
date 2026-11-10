@@ -1,18 +1,22 @@
 pub mod helpers;
-use std::{fs::{self, File}, io::{self, BufReader, Read, Write}, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
-use helpers::ProgressWriter;
 use commons::partitions::{PartitionInfo, free_space};
 use commons::run::powershell;
+use helpers::ProgressWriter;
 use serde::{Deserialize, Serialize};
+use std::{
+    fs::{self, File},
+    io::{self, BufReader, Read, Write},
+    path::{Path, PathBuf},
+};
 use uuid::Uuid;
 use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};
 use zip::ZipArchive;
 
-
 const VENTOY_ICON: &[u8] = include_bytes!("../../icons/ventoy.ico");
 const IMAGE_TYPES: [&str; 7] = ["iso", "img", "wim", "efi", "vhd", "vhdx", "vtoy"];
-const STATICS_URL: &str = "https://github.com/UsurperProject/YoRBo-statics/archive/refs/heads/main.zip";
+const STATICS_URL: &str =
+    "https://github.com/UsurperProject/YoRBo-statics/archive/refs/heads/main.zip";
 
 pub fn check_existing_install() -> Result<Option<PathBuf>> {
     let expected_path = PathBuf::from("C:/Program Files (x86)/YoRBo/yorbo.exe");
@@ -37,10 +41,11 @@ pub fn check_existing_install() -> Result<Option<PathBuf>> {
 }
 
 pub fn install_runner(directory: &mut PathBuf, runner: &[u8]) -> Result<()> {
-    let is_dir_yorbo = directory.file_name()
-    .and_then(|name| name.to_str())
-    .map(|s| s.to_lowercase())
-    .map_or(false, |s| s == "yorbo");
+    let is_dir_yorbo = directory
+        .file_name()
+        .and_then(|name| name.to_str())
+        .map(|s| s.to_lowercase())
+        .map_or(false, |s| s == "yorbo");
 
     if !is_dir_yorbo {
         directory.push("YoRBo");
@@ -67,7 +72,10 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
         if !entry.is_file() {
             continue;
         }
-        let Some(rel) = entry.enclosed_name().map(|n| n.components().skip(1).collect::<PathBuf>()) else {
+        let Some(rel) = entry
+            .enclosed_name()
+            .map(|n| n.components().skip(1).collect::<PathBuf>())
+        else {
             continue;
         };
         if rel == Path::new("grubx64_unmodified.efi") {
@@ -77,7 +85,8 @@ pub fn install_bootloader(drive: char, bootloader: PathBuf) -> Result<()> {
             plan.push((i, root.join(dest)));
         }
     }
-    let grub_index = grub_index.ok_or_else(|| anyhow!("the statics archive has no grubx64_unmodified.efi"))?;
+    let grub_index =
+        grub_index.ok_or_else(|| anyhow!("the statics archive has no grubx64_unmodified.efi"))?;
     if !plan.iter().any(|(_, d)| d.ends_with("caged_vtoy.img")) {
         return Err(anyhow!("the statics archive has no caged_vtoy.img"));
     }
@@ -145,13 +154,19 @@ pub fn patch_grub(data: &mut [u8]) -> Result<()> {
     rec.extend_from_slice(b"(,2)/grub\0");
 
     // Count occurrences
-    let count = data.windows(rec.len()).filter(|w| *w == rec.as_slice()).count();
+    let count = data
+        .windows(rec.len())
+        .filter(|w| *w == rec.as_slice())
+        .count();
     if count != 1 {
         return Err(anyhow!("wrong build ?"));
     }
 
     // Find index
-    let i = data.windows(rec.len()).position(|w| w == rec.as_slice()).unwrap();
+    let i = data
+        .windows(rec.len())
+        .position(|w| w == rec.as_slice())
+        .unwrap();
 
     // 16-byte null-padded buffer
     let mut padded_new = [0u8; 16];
@@ -186,7 +201,9 @@ pub fn write_config(runner_dir: &Path, bootloader: &PartitionInfo) -> Result<()>
     let path = runner_dir.join("config"); // the runner reads <its own dir>\config
     let mut config: Config = confy::load_path(&path).unwrap_or_default();
     config.partition = Some((bootloader.disk_number, bootloader.partition_number));
-    config.guid = bootloader.guid.expect("MBR drives as bootloader is not supported");
+    config.guid = bootloader
+        .guid
+        .expect("MBR drives as bootloader is not supported");
     confy::store_path(&path, &config)?;
     Ok(())
 }

@@ -12,7 +12,6 @@ fn main() {
             .set_icon("../icons/yorbo_logo.ico")
             .compile()
             .expect("failed to embed the icon (is icons/yorbo_logo.ico there?)");
-
     }
 
     println!("cargo:rerun-if-changed=build.rs");

@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
+use uuid::Uuid;
 
 #[cfg(windows)]
 mod windows;
@@ -30,24 +30,32 @@ pub struct PartitionInfo {
     pub free: Option<u64>, // free bytes on the volume; None if Windows can't say
 }
 
-
 impl PartitionInfo {
     pub fn verify_format(&self) -> Result<bool> {
-    if self.mountpoint.is_none() {
-        return Err(anyhow!("You forgot to mount the thing first"));
-    }
-    if !self.partition_type.as_ref().unwrap().to_lowercase().contains("fat32") {
-        return Err(anyhow!("Illegal partition type {}", self.partition_type.as_ref().unwrap()));
-    }
-    #[cfg(windows)]
-    let base_path = format!("{}:\\", self.mountpoint.as_ref().unwrap());
-    #[cfg(linux)]
-    let base_path = format!("{}/", self.mountpoint.as_ref().unwrap());
-    let file1 = Path::new(&base_path).join("EFI/BOOT/yorbox64.efi");
-    let file2 = Path::new(&base_path).join("yorbo/grub.cfg");
-    let file3 = Path::new(&base_path).join("ventoy/caged_vtoy.img");
+        if self.mountpoint.is_none() {
+            return Err(anyhow!("You forgot to mount the thing first"));
+        }
+        if !self
+            .partition_type
+            .as_ref()
+            .unwrap()
+            .to_lowercase()
+            .contains("fat32")
+        {
+            return Err(anyhow!(
+                "Illegal partition type {}",
+                self.partition_type.as_ref().unwrap()
+            ));
+        }
+        #[cfg(windows)]
+        let base_path = format!("{}:\\", self.mountpoint.as_ref().unwrap());
+        #[cfg(linux)]
+        let base_path = format!("{}/", self.mountpoint.as_ref().unwrap());
+        let file1 = Path::new(&base_path).join("EFI/BOOT/yorbox64.efi");
+        let file2 = Path::new(&base_path).join("yorbo/grub.cfg");
+        let file3 = Path::new(&base_path).join("ventoy/caged_vtoy.img");
 
-    return Ok(file1.exists() && file2.exists() && file3.exists());
+        return Ok(file1.exists() && file2.exists() && file3.exists());
     }
 }
 

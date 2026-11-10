@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 use std::fs::OpenOptions;
-use std::io::{Error, ErrorKind, Read, Result, Write};
+use std::io::{Error, ErrorKind, Read, Result};
 use std::os::windows::fs::OpenOptionsExt;
 use std::os::windows::io::AsRawHandle;
 use std::path::Path;
@@ -18,17 +18,40 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
 
     #[repr(C)]
     #[derive(Default, Clone, Copy)]
-    struct DiskExtent { disk_number: u32, starting_offset: i64, extent_length: i64 }
+    struct DiskExtent {
+        disk_number: u32,
+        starting_offset: i64,
+        extent_length: i64,
+    }
     #[repr(C)]
     #[derive(Default)]
-    struct VolumeDiskExtents { count: u32, extents: [DiskExtent; 1] }
+    struct VolumeDiskExtents {
+        count: u32,
+        extents: [DiskExtent; 1],
+    }
 
     #[link(name = "kernel32")]
     unsafe extern "system" {
-        fn DeviceIoControl(h: *mut c_void, code: u32, inb: *const c_void, insz: u32,
-            outb: *mut c_void, outsz: u32, ret: *mut u32, ov: *mut c_void) -> i32;
-        fn GetVolumeInformationW(root: *const u16, vol: *mut u16, vsz: u32, serial: *mut u32,
-            maxcomp: *mut u32, flags: *mut u32, fs: *mut u16, fssz: u32) -> i32;
+        fn DeviceIoControl(
+            h: *mut c_void,
+            code: u32,
+            inb: *const c_void,
+            insz: u32,
+            outb: *mut c_void,
+            outsz: u32,
+            ret: *mut u32,
+            ov: *mut c_void,
+        ) -> i32;
+        fn GetVolumeInformationW(
+            root: *const u16,
+            vol: *mut u16,
+            vsz: u32,
+            serial: *mut u32,
+            maxcomp: *mut u32,
+            flags: *mut u32,
+            fs: *mut u16,
+            fssz: u32,
+        ) -> i32;
     }
 
     fn crc32c(buf: &[u8]) -> u32 {
@@ -49,11 +72,15 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     let full = abs.to_string_lossy().into_owned();
     let b = full.as_bytes();
     if b.len() < 5 || !b[0].is_ascii_alphabetic() || b[1] != b':' {
-        return Err(err("unsupported path: need a local drive-letter path like D:\\x.iso"));
+        return Err(err(
+            "unsupported path: need a local drive-letter path like D:\\x.iso",
+        ));
     }
     let drive = (b[0] as char).to_ascii_uppercase();
 
-    let ext = abs.extension().map(|e| format!(".{}", e.to_string_lossy().to_ascii_lowercase()));
+    let ext = abs
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy().to_ascii_lowercase()));
     match ext.as_deref() {
         Some(".iso" | ".img" | ".wim" | ".efi" | ".vhd" | ".vhdx" | ".dat" | ".vtoy") => {}
         _ => return Err(err("unsupported file suffix")),
@@ -62,15 +89,26 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     let root: Vec<u16> = format!("{drive}:\\").encode_utf16().chain([0]).collect();
     let mut fsname = [0u16; 64];
     let ok = unsafe {
-        GetVolumeInformationW(root.as_ptr(), std::ptr::null_mut(), 0, std::ptr::null_mut(),
-            std::ptr::null_mut(), std::ptr::null_mut(), fsname.as_mut_ptr(), 63)
+        GetVolumeInformationW(
+            root.as_ptr(),
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            fsname.as_mut_ptr(),
+            63,
+        )
     };
     if ok == 0 {
         return Err(Error::last_os_error());
     }
     let n = fsname.iter().position(|&c| c == 0).unwrap_or(0);
     let fsname = String::from_utf16_lossy(&fsname[..n]).to_ascii_uppercase();
-    if !matches!(fsname.as_str(), "NTFS" | "EXFAT" | "FAT" | "FAT32" | "FAT16" | "FAT12" | "UDF") {
+    if !matches!(
+        fsname.as_str(),
+        "NTFS" | "EXFAT" | "FAT" | "FAT32" | "FAT16" | "FAT12" | "UDF"
+    ) {
         return Err(err("unsupported file system"));
     }
 
@@ -85,9 +123,16 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     let mut ext = VolumeDiskExtents::default();
     let mut got = 0u32;
     let r = unsafe {
-        DeviceIoControl(vol.as_raw_handle() as *mut c_void, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
-            std::ptr::null(), 0, &mut ext as *mut _ as *mut c_void,
-            std::mem::size_of::<VolumeDiskExtents>() as u32, &mut got, std::ptr::null_mut())
+        DeviceIoControl(
+            vol.as_raw_handle() as *mut c_void,
+            IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+            std::ptr::null(),
+            0,
+            &mut ext as *mut _ as *mut c_void,
+            std::mem::size_of::<VolumeDiskExtents>() as u32,
+            &mut got,
+            std::ptr::null_mut(),
+        )
     };
     if r == 0 || ext.count == 0 {
         return Err(Error::last_os_error());
@@ -95,17 +140,20 @@ pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     drop(vol);
     let part_offset = ext.extents[0].starting_offset as u64;
 
-    let mut disk = open(format!("\\\\.\\PhysicalDrive{}", ext.extents[0].disk_number))?;
+    let mut disk = open(format!(
+        "\\\\.\\PhysicalDrive{}",
+        ext.extents[0].disk_number
+    ))?;
     let mut sector = [0u8; 512];
     disk.read_exact(&mut sector)?;
     let sig = &sector[0x1B8..0x1BC];
 
     let mut out = vec![0u8; VLNK_FILE_LEN];
-    out[0..16].copy_from_slice(b"  www.ventoy.net"); 
+    out[0..16].copy_from_slice(b"  www.ventoy.net");
     out[20..24].copy_from_slice(sig);
     out[24..32].copy_from_slice(&part_offset.to_le_bytes());
     out[32..32 + rel.len()].copy_from_slice(rel.as_bytes());
-    let crc = crc32c(&out[..VLNK_STRUCT_LEN]); 
+    let crc = crc32c(&out[..VLNK_STRUCT_LEN]);
     out[16..20].copy_from_slice(&crc.to_le_bytes());
     Ok(out)
 }
