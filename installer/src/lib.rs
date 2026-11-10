@@ -1,7 +1,8 @@
 pub mod helpers;
 use std::{fs::{self, File}, io::{self, BufReader, Read, Write}, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
-use helpers::{Partition, ProgressWriter, free_space, powershell};
+use helpers::{Partition, ProgressWriter, free_space};
+use commons::run::powershell;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use winreg::{RegKey, enums::HKEY_LOCAL_MACHINE};

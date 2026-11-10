@@ -3,8 +3,7 @@ use anyhow::{Ok, Result, anyhow, bail};
 use serde_json::Value;
 use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
-use std::process::Command;
-use std::os::windows::process::CommandExt;
+use commons::run::powershell;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -105,23 +104,6 @@ impl<W: Write, F: FnMut(u64)> Write for ProgressWriter<W, F> {
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
     }
-}
-
-pub fn powershell(arg: &str) -> Result<String> {
-    let create_no_window: u32 = 0x08000000;
-    let command = format!(
-        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $ErrorActionPreference = 'Stop'; {}",
-        arg
-    );
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &command])
-        .creation_flags(create_no_window)
-        .output()?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("{}", stderr.lines().find(|l| !l.trim().is_empty()).unwrap_or("PowerShell failed"));
-    }
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 const PARTITION_FIELDS: &str = "DiskNumber, PartitionNumber, \
