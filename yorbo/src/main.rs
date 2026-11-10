@@ -1,5 +1,4 @@
 mod config;
-mod partitions;
 mod toyboot;
 mod vlnk;
 
@@ -7,6 +6,7 @@ use std::{any, path::PathBuf};
 use std::env::current_exe;
 use anyhow::{Result, Context};
 use commons::error_handler::show_err;
+use commons::partitions;
 
 use hadris::fs::Stored::No;
 use input_macro::input;
@@ -69,7 +69,7 @@ fn real_main() -> Result<()> {
         toyboot_partition = partitions::find(cfg.guid);
     }
 
-    let toyboot_partition = toyboot_partition.unwrap();
+    let mut toyboot_partition = toyboot_partition.unwrap();
     if !toyboot_partition.verify_format()? {
         cfg = reconfigure()?;
     }

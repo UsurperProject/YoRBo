@@ -2696,6 +2696,7 @@ name = "installer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "commons",
  "confy",
  "embed-manifest",
  "rfd",

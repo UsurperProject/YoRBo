@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::{thread, time::{Duration, Instant}};
 
 use anyhow::{Result, anyhow};
-use installer::helpers::{self, Partition};
+use commons::partitions::{PartitionInfo, get_partitions};
 use installer::{
     check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader, install_runner,
     register_context_menu, write_config,
@@ -42,8 +42,8 @@ fn main() -> Result<()> {
 
 #[derive(Default)]
 struct Candidates {
-    fat32: Vec<Partition>,
-    shrink: Vec<Partition>,
+    fat32: Vec<PartitionInfo>,
+    shrink: Vec<PartitionInfo>,
 }
 type Shared = Arc<Mutex<Candidates>>;
 
@@ -227,7 +227,7 @@ fn run_bootloader_install(
     let index = usize::try_from(index).map_err(|_| anyhow!("No partition selected"))?;
 
     // 1. Decide which drive the boot files go on.
-    let (drive, boot_partition): (char, Partition) = {
+    let (drive, boot_partition): (char, PartitionInfo) = {
         let mut found = cands.lock().unwrap();
         match target {
             Target::ExistingFat32 => {
@@ -287,7 +287,7 @@ fn run_bootloader_install(
 
 /// Config file, shortcut, right-click menu. The bootloader is already installed at this point, so a
 /// failure here is reported but doesn't undo anything or stop the install.
-fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path, boot: &Partition) {
+fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path, boot: &PartitionInfo) {
     type Task<'a> = Box<dyn Fn() -> Result<()> + 'a>;
     let tasks: Vec<(&str, Task)> = vec![
         ("Save YoRBo's configuration", Box::new(|| write_config(runner_dir, boot))),
@@ -342,7 +342,7 @@ fn show_tasks(weak: &Weak<AppWindow>, rows: &[(String, TaskState)]) {
 
 fn load_candidates() -> Result<Candidates> {
     let mut found = Candidates::default();
-    for p in helpers::list_vols()? {
+    for p in get_partitions()? {
         // Unknown free space (None) is let through; install_bootloader checks again before writing.
         if p.free.is_some_and(|free| free < MIN_FREE_BYTES) {
             continue;
@@ -359,13 +359,13 @@ fn load_candidates() -> Result<Candidates> {
     Ok(found)
 }
 
-fn is_esp(p: &Partition) -> bool {
+fn is_esp(p: &PartitionInfo) -> bool {
     p.system_type.as_deref() == Some("System")
 }
 
 /// Drive letter of `p`, mounting it first if it has none (the EFI partition and
 /// freshly created partitions usually don't).
-fn drive_letter(p: &mut Partition) -> Result<char> {
+fn drive_letter(p: &mut PartitionInfo) -> Result<char> {
     if p.mountpoint.is_none() {
         p.ensure_mounted()?; // expected to fill in `p.mountpoint`
     }
@@ -379,7 +379,7 @@ fn drive_letter(p: &mut Partition) -> Result<char> {
         })
 }
 
-fn label(p: &Partition) -> String {
+fn label(p: &PartitionInfo) -> String {
     if is_esp(p) {
         "Windows EFI partition".into()
     } else if let Some(letter) = p.mountpoint.as_deref().and_then(|m| m.chars().next()) {
@@ -389,7 +389,7 @@ fn label(p: &Partition) -> String {
     }
 }
 
-fn options(parts: &[Partition]) -> Vec<PartitionOption> {
+fn options(parts: &[PartitionInfo]) -> Vec<PartitionOption> {
     parts
         .iter()
         .map(|p| {

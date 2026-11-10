@@ -3,18 +3,16 @@ use hadris::fat::exfat::sync::ExFatFs;
 use hadris::fs::sync::Volume;
 use hadris::fs::OpenOptions;
 use hadris::host::FileDevice;
-use hadris::io::sync::Write;
 use hadris::part::{self, Partition};
 use hadris::sync::{open, AnyFs};
-use crate::partitions::PartitionInfo;
+use commons::partitions::PartitionInfo;
 use std::path::{PathBuf, Path};
 use crate::vlnk::create_vlnk;
 use hadris::fs::MountOptions;
 use std::process::Command;
-use std::{any, fs};
 use grubenv::GrubEnv;
 use efivar::boot::{
-    BootEntry, BootEntryAttributes, BootVarWriter, EFIHardDrive, EFIHardDriveType, FilePath,
+    BootEntry, BootEntryAttributes, EFIHardDrive, EFIHardDriveType, FilePath,
     FilePathList,
 };
 use efivar::efi::{Variable, VariableFlags};

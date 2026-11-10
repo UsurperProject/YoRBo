@@ -1,7 +1,8 @@
 pub mod helpers;
 use std::{fs::{self, File}, io::{self, BufReader, Read, Write}, path::{Path, PathBuf}};
 use anyhow::{Ok, Result, anyhow};
-use helpers::{Partition, ProgressWriter, free_space};
+use helpers::ProgressWriter;
+use commons::partitions::{PartitionInfo, free_space};
 use commons::run::powershell;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -174,8 +175,8 @@ struct Config {
 
 /// Creates `<runner_dir>\config` (or updates it if a previous install left one) so
 /// `yorbo.exe` knows which partition holds the bootloader. The runner finds it by GUID.
-pub fn write_config(runner_dir: &Path, bootloader: &Partition) -> Result<()> {
-    if bootloader.guid.is_nil() {
+pub fn write_config(runner_dir: &Path, bootloader: &PartitionInfo) -> Result<()> {
+    if bootloader.guid.is_none() {
         return Err(anyhow!(
             "partition {} on disk {} has no GUID (UEFI boot needs a GPT disk)",
             bootloader.partition_number,
@@ -185,7 +186,7 @@ pub fn write_config(runner_dir: &Path, bootloader: &Partition) -> Result<()> {
     let path = runner_dir.join("config"); // the runner reads <its own dir>\config
     let mut config: Config = confy::load_path(&path).unwrap_or_default();
     config.partition = Some((bootloader.disk_number, bootloader.partition_number));
-    config.guid = bootloader.guid;
+    config.guid = bootloader.guid.expect("MBR drives as bootloader is not supported");
     confy::store_path(&path, &config)?;
     Ok(())
 }
