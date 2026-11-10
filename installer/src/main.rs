@@ -2,13 +2,16 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::{thread, time::{Duration, Instant}};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Result, anyhow};
 use commons::partitions::{PartitionInfo, get_partitions};
 use installer::{
-    check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader, install_runner,
-    register_context_menu, write_config,
+    check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader,
+    install_runner, register_context_menu, write_config,
 };
 use slint::{ModelRc, VecModel, Weak};
 
@@ -24,7 +27,6 @@ const MIN_SCAN_TIME: Duration = Duration::from_secs(2);
 /// GitHub doesn't send a Content-Length for archives, so progress is measured against this.
 const STATICS_APPROX_BYTES: u64 = 20_000_000;
 
-
 fn main() -> Result<()> {
     let app = AppWindow::new()?;
     app.set_step(Step::Scanning);
@@ -39,7 +41,6 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-
 #[derive(Default)]
 struct Candidates {
     fat32: Vec<PartitionInfo>,
@@ -52,7 +53,6 @@ enum Target {
     ExistingFat32,
     NewPartition,
 }
-
 
 fn start_checking_installation(app: &AppWindow) {
     let weak = app.as_weak();
@@ -185,15 +185,26 @@ fn handle_flow(app: &AppWindow, candidates: &Shared) {
     let cands = candidates.clone();
     app.on_continue_existing(move |i| {
         let runner_dir = PathBuf::from(w.unwrap().get_runner_path().as_str());
-        install_bootloader_async(w.clone(), cands.clone(), runner_dir, Target::ExistingFat32, i)
+        install_bootloader_async(
+            w.clone(),
+            cands.clone(),
+            runner_dir,
+            Target::ExistingFat32,
+            i,
+        )
     });
     let w = app.as_weak();
     let cands = candidates.clone();
     app.on_create_partition(move |i| {
         let runner_dir = PathBuf::from(w.unwrap().get_runner_path().as_str());
-        install_bootloader_async(w.clone(), cands.clone(), runner_dir, Target::NewPartition, i)
+        install_bootloader_async(
+            w.clone(),
+            cands.clone(),
+            runner_dir,
+            Target::NewPartition,
+            i,
+        )
     });
-
 
     app.on_finish(|| {
         slint::quit_event_loop().ok();
@@ -212,7 +223,12 @@ fn install_bootloader_async(
 ) {
     thread::spawn(move || {
         if let Err(e) = run_bootloader_install(&weak, &cands, &runner_dir, target, index) {
-            fail(&weak, "Couldn't set up the bootloader", &e, Step::BootloaderChoice);
+            fail(
+                &weak,
+                "Couldn't set up the bootloader",
+                &e,
+                Step::BootloaderChoice,
+            );
         }
     });
 }
@@ -231,12 +247,22 @@ fn run_bootloader_install(
         let mut found = cands.lock().unwrap();
         match target {
             Target::ExistingFat32 => {
-                let part = found.fat32.get_mut(index).ok_or_else(|| anyhow!("No partition selected"))?;
+                let part = found
+                    .fat32
+                    .get_mut(index)
+                    .ok_or_else(|| anyhow!("No partition selected"))?;
                 (drive_letter(part)?, part.clone())
             }
             Target::NewPartition => {
-                let part = found.shrink.get(index).ok_or_else(|| anyhow!("No volume selected"))?;
-                let text = format!("Shrinking {} by {} MB…", label(part), BOOTLOADER_PARTITION_MB);
+                let part = found
+                    .shrink
+                    .get(index)
+                    .ok_or_else(|| anyhow!("No volume selected"))?;
+                let text = format!(
+                    "Shrinking {} by {} MB…",
+                    label(part),
+                    BOOTLOADER_PARTITION_MB
+                );
                 ui(weak, move |a| {
                     a.set_bootloader_path(text.into());
                     a.set_step(Step::PreparingBootloader);
@@ -262,7 +288,8 @@ fn run_bootloader_install(
                 return;
             }
             last_update = Instant::now();
-            let fraction = (done as f64 / total.unwrap_or(STATICS_APPROX_BYTES) as f64).min(0.99) as f32;
+            let fraction =
+                (done as f64 / total.unwrap_or(STATICS_APPROX_BYTES) as f64).min(0.99) as f32;
             let caption = match total {
                 Some(t) => format!("{} / {}", format_size(done), format_size(t)),
                 None => format_size(done),
@@ -290,16 +317,24 @@ fn run_bootloader_install(
 fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path, boot: &PartitionInfo) {
     type Task<'a> = Box<dyn Fn() -> Result<()> + 'a>;
     let tasks: Vec<(&str, Task)> = vec![
-        ("Save YoRBo's configuration", Box::new(|| write_config(runner_dir, boot))),
-        ("Create “Boot into Ventoy” shortcut", Box::new(|| create_ventoy_shortcut(runner_dir))),
+        (
+            "Save YoRBo's configuration",
+            Box::new(|| write_config(runner_dir, boot)),
+        ),
+        (
+            "Create “Boot into Ventoy” shortcut",
+            Box::new(|| create_ventoy_shortcut(runner_dir)),
+        ),
         (
             "Add “Boot once with YoRBo” to the right-click menu",
             Box::new(|| register_context_menu(runner_dir)),
         ),
     ];
 
-    let mut rows: Vec<(String, TaskState)> =
-        tasks.iter().map(|(title, _)| (title.to_string(), TaskState::Queued)).collect();
+    let mut rows: Vec<(String, TaskState)> = tasks
+        .iter()
+        .map(|(title, _)| (title.to_string(), TaskState::Queued))
+        .collect();
     show_tasks(weak, &rows);
     ui(weak, |a| a.set_step(Step::PostInstall));
 
@@ -331,9 +366,15 @@ fn run_post_install(weak: &Weak<AppWindow>, runner_dir: &Path, boot: &PartitionI
 fn show_tasks(weak: &Weak<AppWindow>, rows: &[(String, TaskState)]) {
     let items: Vec<TaskItem> = rows
         .iter()
-        .map(|(title, state)| TaskItem { title: title.as_str().into(), detail: "".into(), state: *state })
+        .map(|(title, state)| TaskItem {
+            title: title.as_str().into(),
+            detail: "".into(),
+            state: *state,
+        })
         .collect();
-    ui(weak, move |a| a.set_tasks(ModelRc::new(VecModel::from(items))));
+    ui(weak, move |a| {
+        a.set_tasks(ModelRc::new(VecModel::from(items)))
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -375,7 +416,10 @@ fn drive_letter(p: &mut PartitionInfo) -> Result<char> {
         .filter(char::is_ascii_alphabetic)
         .map(|c| c.to_ascii_uppercase())
         .ok_or_else(|| {
-            anyhow!("{} has no drive letter, so files can't be written to it.", label(p))
+            anyhow!(
+                "{} has no drive letter, so files can't be written to it.",
+                label(p)
+            )
         })
 }
 
@@ -393,9 +437,20 @@ fn options(parts: &[PartitionInfo]) -> Vec<PartitionOption> {
     parts
         .iter()
         .map(|p| {
-            let fs = p.partition_type.as_deref().unwrap_or("?").to_ascii_uppercase();
-            let detail = if is_esp(p) { "System".to_string() } else { format_size(p.size) };
-            PartitionOption { name: label(p).into(), meta: format!("{fs} · {detail}").into() }
+            let fs = p
+                .partition_type
+                .as_deref()
+                .unwrap_or("?")
+                .to_ascii_uppercase();
+            let detail = if is_esp(p) {
+                "System".to_string()
+            } else {
+                format_size(p.size)
+            };
+            PartitionOption {
+                name: label(p).into(),
+                meta: format!("{fs} · {detail}").into(),
+            }
         })
         .collect()
 }
@@ -403,7 +458,11 @@ fn options(parts: &[PartitionInfo]) -> Vec<PartitionOption> {
 fn format_size(bytes: u64) -> String {
     const GB: u64 = 1 << 30;
     const MB: u64 = 1 << 20;
-    if bytes >= GB { format!("{} GB", bytes / GB) } else { format!("{} MB", bytes / MB) }
+    if bytes >= GB {
+        format!("{} GB", bytes / GB)
+    } else {
+        format!("{} MB", bytes / MB)
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

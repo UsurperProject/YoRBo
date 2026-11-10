@@ -1,7 +1,7 @@
-use serde_json;
-use anyhow::{Result};
 use super::PartitionInfo;
 use crate::run::powershell;
+use anyhow::Result;
+use serde_json;
 
 const PARTITION_FIELDS: &str = "DiskNumber, PartitionNumber, \
     @{N='Type'; E={[string]$_.Type}}, \

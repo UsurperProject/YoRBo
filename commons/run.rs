@@ -1,6 +1,6 @@
 use anyhow::{Ok, Result};
-use std::process::Command;
 use std::os::windows::process::CommandExt;
+use std::process::Command;
 
 #[cfg(windows)]
 pub fn powershell(arg: &str) -> Result<String> {
@@ -15,7 +15,13 @@ pub fn powershell(arg: &str) -> Result<String> {
         .output()?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("{}", stderr.lines().find(|l| !l.trim().is_empty()).unwrap_or("PowerShell failed"));
+        anyhow::bail!(
+            "{}",
+            stderr
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or("PowerShell failed")
+        );
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

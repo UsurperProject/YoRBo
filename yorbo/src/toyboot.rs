@@ -1,21 +1,20 @@
-use anyhow::{Context, Result, anyhow};
-use hadris::fat::exfat::sync::ExFatFs;
-use hadris::fs::sync::Volume;
-use hadris::fs::OpenOptions;
-use hadris::host::FileDevice;
-use hadris::part::{self, Partition};
-use hadris::sync::{open, AnyFs};
-use commons::partitions::PartitionInfo;
-use std::path::{PathBuf, Path};
 use crate::vlnk::create_vlnk;
-use hadris::fs::MountOptions;
-use std::process::Command;
-use grubenv::GrubEnv;
+use anyhow::{Context, Result, anyhow};
+use commons::partitions::PartitionInfo;
 use efivar::boot::{
-    BootEntry, BootEntryAttributes, EFIHardDrive, EFIHardDriveType, FilePath,
-    FilePathList,
+    BootEntry, BootEntryAttributes, EFIHardDrive, EFIHardDriveType, FilePath, FilePathList,
 };
 use efivar::efi::{Variable, VariableFlags};
+use grubenv::GrubEnv;
+use hadris::fat::exfat::sync::ExFatFs;
+use hadris::fs::MountOptions;
+use hadris::fs::OpenOptions;
+use hadris::fs::sync::Volume;
+use hadris::host::FileDevice;
+use hadris::part::{self, Partition};
+use hadris::sync::{AnyFs, open};
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 type FatVolume = Volume<hadris::fat::exfat::sync::ExFatFs<hadris::storage::Partition<FileDevice>>>;
 
@@ -23,11 +22,14 @@ fn get_fat_volume(partition: &PartitionInfo) -> Result<FatVolume> {
     if partition.mountpoint.is_none() {
         return Err(anyhow!("Partition not mounted"));
     }
-    let img_path: PathBuf = PathBuf::from(format!("{}:/ventoy/caged_vtoy.img", partition.mountpoint.as_ref().unwrap())); 
+    let img_path: PathBuf = PathBuf::from(format!(
+        "{}:/ventoy/caged_vtoy.img",
+        partition.mountpoint.as_ref().unwrap()
+    ));
     let image = std::fs::OpenOptions::new()
-    .read(true)
-    .write(true)          // ← this is what FileDevice::open omits
-    .open(img_path)?;
+        .read(true)
+        .write(true) // ← this is what FileDevice::open omits
+        .open(img_path)?;
     let mut device = FileDevice::new(image).context("failed to load image")?;
     let table = part::sync::read(&mut device).context("Failed to read img partition tabl")?;
 
@@ -35,9 +37,8 @@ fn get_fat_volume(partition: &PartitionInfo) -> Result<FatVolume> {
     for partition in table.partitions() {
         let slice = match part::sync::open(&mut device, &partition) {
             Ok(s) => s,
-            Err(_) => continue, 
+            Err(_) => continue,
         };
-
 
         match open(slice, MountOptions::new()) {
             Ok(AnyFs::ExFat(exfat_fs)) => {
@@ -64,12 +65,14 @@ fn get_fat_volume(partition: &PartitionInfo) -> Result<FatVolume> {
     Ok(Volume::new(container))
 }
 
-pub fn set_iso_boot(partition: &PartitionInfo, image: PathBuf) -> Result<()>{
-    let volume = get_fat_volume(&partition)
-    .context("Unable to find suitable exfat volume")?;
-    let filename = format!("yorbo_fast.vlnk.{}", image.extension().unwrap().to_str().unwrap().to_lowercase());
+pub fn set_iso_boot(partition: &PartitionInfo, image: PathBuf) -> Result<()> {
+    let volume = get_fat_volume(&partition).context("Unable to find suitable exfat volume")?;
+    let filename = format!(
+        "yorbo_fast.vlnk.{}",
+        image.extension().unwrap().to_str().unwrap().to_lowercase()
+    );
     set_ventoy_boot(&partition).context("Failed to delete stuff")?;
-    let mut vlnk = volume.open(filename,  OpenOptions::new().write().create().truncate())?;
+    let mut vlnk = volume.open(filename, OpenOptions::new().write().create().truncate())?;
     println!("file creation fails ?");
     let mut vlnk_data = create_vlnk(image).context("vlnk creation failed")?;
     vlnk.write(&vlnk_data);
@@ -79,10 +82,11 @@ pub fn set_iso_boot(partition: &PartitionInfo, image: PathBuf) -> Result<()>{
 }
 
 pub fn set_ventoy_boot(partition: &PartitionInfo) -> Result<()> {
-    let dtypes = [".iso" , ".img", ".vhd", ".vhdx", ".vtoy", ".wim", ".efi"];
-    let volume = get_fat_volume(&partition)
-    .context("Unable to find suitable exfat volume")?;
-    let ls = volume.read_dir("/").context("Cannot list content on volume")?;
+    let dtypes = [".iso", ".img", ".vhd", ".vhdx", ".vtoy", ".wim", ".efi"];
+    let volume = get_fat_volume(&partition).context("Unable to find suitable exfat volume")?;
+    let ls = volume
+        .read_dir("/")
+        .context("Cannot list content on volume")?;
     for entry in ls {
         if entry.is_err() {
             continue;
@@ -95,7 +99,7 @@ pub fn set_ventoy_boot(partition: &PartitionInfo) -> Result<()> {
                 };
             }
         }
-    };
+    }
     println!("Deleted all files we could");
     Ok(())
 }
@@ -110,8 +114,8 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     #[cfg(windows)]
     let grubenv_path = format!("{}:/yorbo/grubenv", mountpoint);
     #[cfg(linux)]
-    let grubenv_path = format!("{}/yorbo/grubenv", mount_point );
-    
+    let grubenv_path = format!("{}/yorbo/grubenv", mount_point);
+
     let mut env = if Path::new(&grubenv_path).exists() {
         GrubEnv::load(&grubenv_path).context("failed to load grubenv")?
     } else {
@@ -131,14 +135,19 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     let mut used_ids: Vec<u16> = Vec::new();
     let mut matched: Option<(u16, BootEntry)> = None;
     for var in &vars {
-        let Some(id) = var.boot_var_id() else { continue };
+        let Some(id) = var.boot_var_id() else {
+            continue;
+        };
         used_ids.push(id);
         if matched.is_some() {
             continue;
         }
-        let Ok(entry) = BootEntry::read(&*manager, var) else { continue };
+        let Ok(entry) = BootEntry::read(&*manager, var) else {
+            continue;
+        };
         if let Some(fpl) = &entry.file_path_list {
-            if partition.guid.is_some() && fpl.hard_drive.partition_sig == partition.guid.unwrap()
+            if partition.guid.is_some()
+                && fpl.hard_drive.partition_sig == partition.guid.unwrap()
                 && fpl.file_path.path.eq_ignore_ascii_case(EFI_PATH)
             {
                 matched = Some((id, entry));
@@ -165,15 +174,19 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
                 attributes: BootEntryAttributes::LOAD_OPTION_ACTIVE,
                 description: DESC.to_string(),
                 file_path_list: Some(FilePathList {
-                    file_path: FilePath { path: EFI_PATH.to_string() },
-                    hard_drive: EFIHardDrive{
+                    file_path: FilePath {
+                        path: EFI_PATH.to_string(),
+                    },
+                    hard_drive: EFIHardDrive {
                         partition_number: partition.partition_number,
                         partition_start: partition.offset,
                         partition_size: partition.size,
-                        partition_sig: partition.guid.expect("Booting from MBR drive is not supported"),
+                        partition_sig: partition
+                            .guid
+                            .expect("Booting from MBR drive is not supported"),
                         format: 2,
-                        sig_type: EFIHardDriveType::Gpt
-                    }
+                        sig_type: EFIHardDriveType::Gpt,
+                    },
                 }),
                 optional_data: Vec::new(),
             };
@@ -186,7 +199,6 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     }
 }
 
-
 pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
     let Some(mountpoint) = partition.mountpoint.as_ref() else {
         return Err(anyhow!("partition not mounted"));
@@ -196,13 +208,12 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
 
     #[cfg(windows)]
     let grubenv_path = format!("{}:\\yorbo\\grubenv", mountpoint);
-    
+
     #[cfg(linux)]
     let grubenv_path = format!("{}/yorbo/grubenv", mountpoint);
-    
-    
-    let mut env = GrubEnv::load(&grubenv_path)
-        .context("failed to load grubenv after ensure_nvram_entry")?;
+
+    let mut env =
+        GrubEnv::load(&grubenv_path).context("failed to load grubenv after ensure_nvram_entry")?;
     env.set("boot_once", "true") //This is unnecessary for now since the feature this is intended for is stubbed out in yorbo-statics
         .context("failed to set boot_once=true")?;
 
