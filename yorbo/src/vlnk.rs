@@ -5,6 +5,9 @@ use std::os::windows::fs::OpenOptionsExt;
 use std::os::windows::io::AsRawHandle;
 use std::path::Path;
 
+/*  The following function is mostly AI reproduced from the original vlnk source code at ventoy,
+It is mostly unnecessary and will thus be phased out in favor of either the binary executable from ventoy
+(which itself is transparent, despite a lot of things in ventoy not being so) or a proper handwritten reimplementation */
 
 pub fn create_vlnk(image: impl AsRef<Path>) -> Result<Vec<u8>> {
     const VLNK_FILE_LEN: usize = 32768;
