@@ -1,5 +1,6 @@
 pub mod helpers;
 use anyhow::{Ok, Result, anyhow};
+use commons::config::Config;
 use commons::partitions::{PartitionInfo, free_space};
 use commons::run::powershell;
 use helpers::ProgressWriter;
@@ -181,15 +182,6 @@ pub fn patch_grub(data: &mut [u8]) -> Result<()> {
 
 // ############ Post-install##################
 
-/// Same shape (and same `confy` format) as `yorbo/src/config.rs`; keep the two in sync.
-#[derive(Serialize, Deserialize, Default)]
-struct Config {
-    partition: Option<(u32, u32)>,
-    guid: Uuid,
-}
-
-/// Creates `<runner_dir>\config` (or updates it if a previous install left one) so
-/// `yorbo.exe` knows which partition holds the bootloader. The runner finds it by GUID.
 pub fn write_config(runner_dir: &Path, bootloader: &PartitionInfo) -> Result<()> {
     if bootloader.guid.is_none() {
         return Err(anyhow!(

@@ -1,12 +1,11 @@
-mod config;
 mod toyboot;
 mod vlnk;
 
 use anyhow::{Context, Result};
 use clap::{Parser, ValueEnum};
+use commons::config::Config;
 use commons::error_handler::show_err;
 use commons::partitions;
-use config::Config;
 use input_macro::input;
 use std::env::current_exe;
 use std::{any, path::PathBuf};

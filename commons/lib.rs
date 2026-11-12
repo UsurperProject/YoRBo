@@ -1,3 +1,4 @@
+pub mod config;
 pub mod error_handler;
 pub mod installer;
 pub mod partitions;
