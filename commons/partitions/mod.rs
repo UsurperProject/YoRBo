@@ -49,7 +49,7 @@ impl PartitionInfo {
         }
         #[cfg(windows)]
         let base_path = format!("{}:\\", self.mountpoint.as_ref().unwrap());
-        #[cfg(linux)]
+        #[cfg(target_os = "linux")]
         let base_path = format!("{}/", self.mountpoint.as_ref().unwrap());
         let file1 = Path::new(&base_path).join("EFI/BOOT/yorbox64.efi");
         let file2 = Path::new(&base_path).join("yorbo/grub.cfg");

@@ -113,7 +113,7 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     };
     #[cfg(windows)]
     let grubenv_path = format!("{}:/yorbo/grubenv", mountpoint);
-    #[cfg(linux)]
+    #[cfg(target_os = "linux")]
     let grubenv_path = format!("{}/yorbo/grubenv", mount_point);
 
     let mut env = if Path::new(&grubenv_path).exists() {
@@ -209,7 +209,7 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
     #[cfg(windows)]
     let grubenv_path = format!("{}:\\yorbo\\grubenv", mountpoint);
 
-    #[cfg(linux)]
+    #[cfg(target_os = "linux")]
     let grubenv_path = format!("{}/yorbo/grubenv", mountpoint);
 
     let mut env =
@@ -234,7 +234,7 @@ pub fn toyboot(partition: &PartitionInfo) -> Result<()> {
         .status()
         .context("failed to run shutdown /r /t 0")?;
 
-    #[cfg(linux)]
+    #[cfg(target_os = "linux")]
     Command::new("reboot")
         .status()
         .context("failed to run reboot")?;
