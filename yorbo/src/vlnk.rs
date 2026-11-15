@@ -1,3 +1,4 @@
+#![cfg(windows)]
 use std::ffi::c_void;
 use std::fs::OpenOptions;
 use std::io::{Error, ErrorKind, Read, Result};

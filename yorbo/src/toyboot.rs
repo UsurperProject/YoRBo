@@ -1,3 +1,4 @@
+#[cfg(windows)]
 use crate::vlnk::create_vlnk;
 use anyhow::{Context, Result, anyhow};
 use commons::partitions::PartitionInfo;
@@ -114,7 +115,7 @@ pub fn ensure_nvram_entry(partition: &PartitionInfo) -> Result<u16> {
     #[cfg(windows)]
     let grubenv_path = format!("{}:/yorbo/grubenv", mountpoint);
     #[cfg(target_os = "linux")]
-    let grubenv_path = format!("{}/yorbo/grubenv", mount_point);
+    let grubenv_path = format!("{}/yorbo/grubenv", mountpoint);
 
     let mut env = if Path::new(&grubenv_path).exists() {
         GrubEnv::load(&grubenv_path).context("failed to load grubenv")?
