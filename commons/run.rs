@@ -1,6 +1,8 @@
 use anyhow::{Ok, Result};
-use std::os::windows::process::CommandExt;
 use std::process::Command;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 
 #[cfg(windows)]
 pub fn powershell(arg: &str) -> Result<String> {
@@ -23,5 +25,26 @@ pub fn powershell(arg: &str) -> Result<String> {
                 .unwrap_or("PowerShell failed")
         );
     }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+#[cfg(target_os = "linux")]
+pub fn sh_exec(arg: &str) -> Result<String> {
+    let command = format!("set -e; {}", arg);    
+    let output = std::process::Command::new("sh")
+        .args(["-c", &command])
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!(
+            "{}",
+            stderr
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or("Linux Shell failed to execute a command")
+        );
+    }
+
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
