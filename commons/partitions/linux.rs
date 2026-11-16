@@ -1,8 +1,8 @@
 use super::PartitionInfo;
 use crate::run::sh_exec;
 use anyhow::Result;
-use serde::de::{self, Deserializer};
 use serde::Deserialize;
+use serde::de::{self, Deserializer};
 use uuid::Uuid;
 
 struct PartitionList(Vec<PartitionInfo>);
@@ -23,7 +23,11 @@ impl<'de> Deserialize<'de> for PartitionList {
         for (disk_idx, dev) in blockdevices.iter().enumerate() {
             if let Some(children) = dev.get("children").and_then(|c| c.as_array()) {
                 for child in children {
-                    let Some(partition_number) = child.get("partn").and_then(|p| p.as_u64()).map(|n| n as u32) else {
+                    let Some(partition_number) = child
+                        .get("partn")
+                        .and_then(|p| p.as_u64())
+                        .map(|n| n as u32)
+                    else {
                         continue;
                     };
 
@@ -31,9 +35,18 @@ impl<'de> Deserialize<'de> for PartitionList {
                     let start = child.get("start").and_then(|s| s.as_u64()).unwrap_or(0);
                     let offset = start * 512;
 
-                    let partition_type = child.get("fstype").and_then(|v| v.as_str()).map(String::from);
-                    let system_type = child.get("parttype").and_then(|v| v.as_str()).map(String::from);
-                    let mountpoint = child.get("mountpoint").and_then(|v| v.as_str()).map(String::from);
+                    let partition_type = child
+                        .get("fstype")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    let system_type = child
+                        .get("parttype")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
+                    let mountpoint = child
+                        .get("mountpoint")
+                        .and_then(|v| v.as_str())
+                        .map(String::from);
 
                     let uuid_str = child
                         .get("partuuid")
@@ -43,7 +56,9 @@ impl<'de> Deserialize<'de> for PartitionList {
 
                     // Calculate free space if mounted
                     let free = if let Some(ref mp) = mountpoint {
-                        if let Ok(df_out) = sh_exec(&format!("df --output=avail -B1 {} | tail -n 1", mp)) {
+                        if let Ok(df_out) =
+                            sh_exec(&format!("df --output=avail -B1 {} | tail -n 1", mp))
+                        {
                             df_out.trim().parse::<u64>().ok()
                         } else {
                             None
@@ -74,8 +89,8 @@ impl<'de> Deserialize<'de> for PartitionList {
 fn find_device_path(disk_number: u32, partition_number: u32) -> Result<String> {
     let output = sh_exec("lsblk -J -b -o NAME,PATH,PARTN")?;
     let parsed: PartitionList = serde_json::from_str(&output)?;
-    
-    let dev_path = format!("/dev/disk/by-path/..."); 
+
+    let dev_path = format!("/dev/disk/by-path/...");
     let output_raw = sh_exec("lsblk -J -b -o NAME,PATH,PARTN")?;
     let val: serde_json::Value = serde_json::from_str(&output_raw)?;
     if let Some(devices) = val.get("blockdevices").and_then(|v| v.as_array()) {
@@ -83,7 +98,9 @@ fn find_device_path(disk_number: u32, partition_number: u32) -> Result<String> {
         for dev in devices {
             if let Some(children) = dev.get("children").and_then(|c| c.as_array()) {
                 for child in children {
-                    if child.get("partn").and_then(|p| p.as_u64()) == Some(partition_number as u64) && current_disk == disk_number {
+                    if child.get("partn").and_then(|p| p.as_u64()) == Some(partition_number as u64)
+                        && current_disk == disk_number
+                    {
                         if let Some(path) = child.get("path").and_then(|p| p.as_str()) {
                             return Ok(path.to_string());
                         }
@@ -93,7 +110,11 @@ fn find_device_path(disk_number: u32, partition_number: u32) -> Result<String> {
             }
         }
     }
-    anyhow::bail!("Partition not found for disk {} part {}", disk_number, partition_number)
+    anyhow::bail!(
+        "Partition not found for disk {} part {}",
+        disk_number,
+        partition_number
+    )
 }
 
 impl PartitionInfo {
@@ -113,9 +134,10 @@ impl PartitionInfo {
     }
 
     pub fn shrink(&self, size: u32) -> Result<Self> {
-        let _ = self.mountpoint.as_ref().ok_or_else(|| {
-            anyhow::anyhow!("only a mounted volume can be shrunk")
-        })?;
+        let _ = self
+            .mountpoint
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("only a mounted volume can be shrunk"))?;
 
         let dev_path = find_device_path(self.disk_number, self.partition_number)?;
         let shrink_bytes = (size as u64) * 1024 * 1024;
@@ -157,7 +179,11 @@ impl PartitionInfo {
         let partitions = get_partitions()?;
         let new_part = partitions
             .into_iter()
-            .find(|p| p.disk_number == self.disk_number && p.partition_number != self.partition_number && p.size == shrink_bytes)
+            .find(|p| {
+                p.disk_number == self.disk_number
+                    && p.partition_number != self.partition_number
+                    && p.size == shrink_bytes
+            })
             .ok_or_else(|| anyhow::anyhow!("Linux didn't report the new partition"))?;
 
         Ok(new_part)
@@ -165,7 +191,9 @@ impl PartitionInfo {
 }
 
 pub fn get_partitions() -> Result<Vec<PartitionInfo>> {
-    let output = sh_exec("lsblk -J -b -o NAME,PATH,SIZE,FSTYPE,PARTTYPE,PARTN,UUID,PARTUUID,START,MOUNTPOINT")?;
+    let output = sh_exec(
+        "lsblk -J -b -o NAME,PATH,SIZE,FSTYPE,PARTTYPE,PARTN,UUID,PARTUUID,START,MOUNTPOINT",
+    )?;
     let parsed: PartitionList = serde_json::from_str(&output)?;
     Ok(parsed.0)
 }

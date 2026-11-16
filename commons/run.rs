@@ -1,8 +1,7 @@
 use anyhow::{Ok, Result};
-use std::process::Command;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
-
+use std::process::Command;
 
 #[cfg(windows)]
 pub fn powershell(arg: &str) -> Result<String> {
@@ -30,7 +29,7 @@ pub fn powershell(arg: &str) -> Result<String> {
 
 #[cfg(target_os = "linux")]
 pub fn sh_exec(arg: &str) -> Result<String> {
-    let command = format!("set -e; {}", arg);    
+    let command = format!("set -e; {}", arg);
     let output = std::process::Command::new("sh")
         .args(["-c", &command])
         .output()?;
