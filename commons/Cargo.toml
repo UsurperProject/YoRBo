@@ -14,3 +14,7 @@ grubenv = { git = "https://github.com/Ki11switch57/grubenv", version = "0.1.0" }
 efivar = "2.0.0"
 uuid = { version = "1.29.0", features = ["serde"] }
 native-dialog = "0.9.7"
+winreg = "0.56.0"
+zip = "9.6.1"
+ureq = "3.5.2"
+confy = "2.0.0"

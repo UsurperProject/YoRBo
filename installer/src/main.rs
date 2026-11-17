@@ -8,11 +8,11 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use commons::partitions::{PartitionInfo, get_partitions};
-use installer::{
+use commons::installer_lib::{
     check_existing_install, create_ventoy_shortcut, fetch_statics, install_bootloader,
     install_runner, register_context_menu, write_config,
 };
+use commons::partitions::{PartitionInfo, get_partitions};
 use slint::{ModelRc, VecModel, Weak};
 
 slint::include_modules!(); // generates AppWindow, Step, TaskItem, PartitionOption, TaskState
